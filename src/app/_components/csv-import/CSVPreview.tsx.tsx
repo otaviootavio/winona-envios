@@ -61,8 +61,8 @@ export function CSVPreview({ data, file }: CSVPreviewProps) {
       
       const matchesValidation = 
         validationFilter === "all" ||
-        (validationFilter === "valid" && order.trackingCode && isValidTrackingCode(order.trackingCode)) ||
-        (validationFilter === "invalid" && order.trackingCode && !isValidTrackingCode(order.trackingCode));
+        ((validationFilter === "valid" && order.trackingCode && isValidTrackingCode(order.trackingCode)) ??
+        (validationFilter === "invalid" && order.trackingCode && !isValidTrackingCode(order.trackingCode)));
 
       return matchesSearch && matchesValidation;
     })

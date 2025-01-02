@@ -134,9 +134,6 @@ export function OrdersManagement() {
   return (
     <div className="w-full space-y-4">
       <FileUploadCard
-        onFileSelect={handleFileSelect}
-        isUploading={isUploading}
-        isPending={importOrders.isPending}
         latestImport={
           latestImport
             ? {
