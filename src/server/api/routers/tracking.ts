@@ -11,7 +11,7 @@ import { InfoSimplesCorreiosMockClient } from "~/app/api/repositories/InfoSimple
 // });
 
 const correiosClient = new InfoSimplesCorreiosMockClient({
-  token: env.INFOSIMPLES_SECRET!,
+  token: env.INFOSIMPLES_SECRET,
 });
 
 // Schemas for input validation

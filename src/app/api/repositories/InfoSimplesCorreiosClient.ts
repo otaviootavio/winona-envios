@@ -2,6 +2,7 @@ import {
   InfoSimplesApiResponse,
   InfoSimplesClientConfig,
 } from "~/app/api/repositories/types";
+import { InfoSimplesApiResponseSchema } from "~/app/api/repositories/schemas";
 
 export class InfoSimplesCorreiosClient {
   private readonly token: string;
@@ -10,8 +11,8 @@ export class InfoSimplesCorreiosClient {
 
   constructor(config: InfoSimplesClientConfig) {
     this.token = config.token;
-    this.timeout = config.timeout || 300;
-    this.baseUrl = config.baseUrl || "https://api.infosimples.com/api/v2";
+    this.timeout = config.timeout ?? 300;
+    this.baseUrl = config.baseUrl ?? "https://api.infosimples.com/api/v2";
 
     console.log("[InfoSimplesClient] Initialized with config:", {
       baseUrl: this.baseUrl,
@@ -69,7 +70,9 @@ export class InfoSimplesCorreiosClient {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data: InfoSimplesApiResponse = await response.json();
+      const rawData: unknown = await response.json();
+      const data = InfoSimplesApiResponseSchema.parse(rawData);
+
       console.log("[InfoSimplesClient] Parsed response data:", {
         code: data.code,
         code_message: data.code_message,

@@ -1,16 +1,11 @@
-import {
-    InfoSimplesApiResponse,
-    InfoSimplesClientConfig,
-    TrackingData,
-    TrackingHistoryEvent,
-  } from "./types";
+import { type InfoSimplesApiResponse, type InfoSimplesClientConfig, TrackingData, TrackingHistoryEvent } from "./types";
   
   export class InfoSimplesCorreiosMockClient {
     private readonly mockDelay: number;
   
     constructor(config: InfoSimplesClientConfig) {
       // Simulate some network delay (but faster than real API)
-      this.mockDelay = config.timeout || 500;
+      this.mockDelay = config.timeout ?? 500;
     }
   
     private async delay(): Promise<void> {
