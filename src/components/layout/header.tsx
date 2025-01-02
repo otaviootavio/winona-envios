@@ -7,7 +7,7 @@ export async function Header() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur">
-      <div className="container flex h-16 items-center justify-between">
+      <div className="container flex h-16 items-center justify-between p-10">
         <Link href="/" className="flex items-center space-x-2">
           <span className="text-xl font-bold">Winona Envios</span>
         </Link>
