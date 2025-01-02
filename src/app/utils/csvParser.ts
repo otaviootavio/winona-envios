@@ -21,7 +21,7 @@ export class CSVParser {
             ))
             .map((row) => ({
               orderNumber: String(row["Número do Pedido"]).trim(),
-              shippingStatus: String(row["Status do Envio"]).trim(),
+              shippingStatus: String("Desconhecido").trim(),
               trackingCode: row["Código de rastreio do envio"]
                 ? String(row["Código de rastreio do envio"]).trim()
                 : null,

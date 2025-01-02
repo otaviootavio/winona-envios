@@ -88,7 +88,13 @@ export const orderRouter = createTRPCRouter({
       where: { userId: ctx.session.user.id },
       take: 5,
       orderBy: { createdAt: "desc" },
-      include: {
+      select: {
+        id: true,
+        createdAt: true,
+        updatedAt: true,
+        status: true,
+        fileName: true,
+        userId: true,
         _count: {
           select: { orders: true },
         },
