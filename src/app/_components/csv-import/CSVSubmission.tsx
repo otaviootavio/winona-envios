@@ -146,10 +146,10 @@ export function CSVSubmission({ data, file, onSuccess }: CSVSubmissionProps) {
       )}
       <div className="flex flex-row items-center justify-between">
         {/* Help Text */}
-        <div className="text-center text-sm text-muted-foreground">
+        <p className="text-left text-sm text-muted-foreground p-2">
           By clicking Import Orders, only orders with valid tracking codes will
-          be imported. This action cannot be undone.
-        </div>
+          be imported. <br/>This action cannot be undone.
+        </p>
 
         {/* Submit Button */}
         <div className="justify flex">

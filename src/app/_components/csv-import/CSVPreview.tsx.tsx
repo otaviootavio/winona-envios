@@ -40,7 +40,11 @@ interface CSVPreviewProps {
   file: File | null;
 }
 
-type SortField = "orderNumber" | "shippingStatus" | "trackingCode" | "validation";
+type SortField =
+  | "orderNumber"
+  | "shippingStatus"
+  | "trackingCode"
+  | "validation";
 type SortDirection = "asc" | "desc";
 type ValidationStatus = "all" | "valid" | "invalid";
 
@@ -49,20 +53,32 @@ export function CSVPreview({ data, file }: CSVPreviewProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [sortField, setSortField] = useState<SortField>("orderNumber");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
-  const [validationFilter, setValidationFilter] = useState<ValidationStatus>("all");
+  const [validationFilter, setValidationFilter] =
+    useState<ValidationStatus>("all");
   const itemsPerPage = 10;
 
   // Filter and sort data
   const sortedAndFilteredData = [...data]
     .filter((order) => {
-      const matchesSearch = 
+      const matchesSearch =
         order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (order.trackingCode?.toLowerCase() ?? "").includes(searchTerm.toLowerCase());
-      
-      const matchesValidation = 
-        validationFilter === "all" ||
-        ((validationFilter === "valid" && order.trackingCode && isValidTrackingCode(order.trackingCode)) ??
-        (validationFilter === "invalid" && order.trackingCode && !isValidTrackingCode(order.trackingCode)));
+        (order.trackingCode?.toLowerCase() ?? "").includes(
+          searchTerm.toLowerCase(),
+        );
+
+      const matchesValidation = (() => {
+        if (validationFilter === "all") return true;
+
+        if (validationFilter === "valid") {
+          return order.trackingCode && isValidTrackingCode(order.trackingCode);
+        }
+
+        if (validationFilter === "invalid") {
+          return order.trackingCode && !isValidTrackingCode(order.trackingCode);
+        }
+
+        return false;
+      })();
 
       return matchesSearch && matchesValidation;
     })
@@ -77,7 +93,7 @@ export function CSVPreview({ data, file }: CSVPreviewProps) {
 
       const aValue = a[sortField] ?? "";
       const bValue = b[sortField] ?? "";
-      return sortDirection === "asc" 
+      return sortDirection === "asc"
         ? aValue.localeCompare(bValue)
         : bValue.localeCompare(aValue);
     });
@@ -87,7 +103,7 @@ export function CSVPreview({ data, file }: CSVPreviewProps) {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedData = sortedAndFilteredData.slice(
     startIndex,
-    startIndex + itemsPerPage
+    startIndex + itemsPerPage,
   );
 
   const handleSort = (field: SortField) => {
@@ -105,11 +121,11 @@ export function CSVPreview({ data, file }: CSVPreviewProps) {
   };
 
   // Only count orders with tracking codes that are invalid format
-  const invalidOrders = data.filter((order) => 
-    order.trackingCode && !isValidTrackingCode(order.trackingCode)
+  const invalidOrders = data.filter(
+    (order) => order.trackingCode && !isValidTrackingCode(order.trackingCode),
   );
   const hasInvalidOrders = invalidOrders.length > 0;
-  
+
   // Helper to validate tracking code format
   function isValidTrackingCode(code: string): boolean {
     // Correios tracking codes are typically 13 characters
@@ -137,7 +153,8 @@ export function CSVPreview({ data, file }: CSVPreviewProps) {
             <div>
               <CardTitle className="text-base">{file?.name}</CardTitle>
               <CardDescription>
-                {data.length} orders found • {(file?.size ?? 0 / 1024).toFixed(1)} KB
+                {data.length} orders found •{" "}
+                {(file?.size ?? 0 / 1024).toFixed(1)} KB
               </CardDescription>
             </div>
           </div>
@@ -149,7 +166,9 @@ export function CSVPreview({ data, file }: CSVPreviewProps) {
         <Alert variant="destructive">
           <AlertTitle>Invalid Tracking Codes Detected</AlertTitle>
           <AlertDescription>
-            {invalidOrders.length} orders have invalid tracking code formats. Please verify these tracking codes follow the correct format (e.g., AA123456789BR).
+            {invalidOrders.length} orders have invalid tracking code formats.
+            Please verify these tracking codes follow the correct format (e.g.,
+            AA123456789BR).
           </AlertDescription>
         </Alert>
       )}
@@ -168,7 +187,7 @@ export function CSVPreview({ data, file }: CSVPreviewProps) {
           </div>
           <Select
             value={validationFilter}
-            onValueChange={(value) => 
+            onValueChange={(value) =>
               handleValidationFilterChange(value as ValidationStatus)
             }
           >
@@ -250,15 +269,24 @@ export function CSVPreview({ data, file }: CSVPreviewProps) {
                     </TableCell>
                     <TableCell>
                       {!order.trackingCode ? (
-                        <Badge variant="secondary" className="bg-gray-100 text-gray-800">
+                        <Badge
+                          variant="secondary"
+                          className="bg-gray-100 text-gray-800"
+                        >
                           No Tracking
                         </Badge>
                       ) : isValidTrackingCode(order.trackingCode) ? (
-                        <Badge variant="secondary" className="bg-green-100 text-green-800">
+                        <Badge
+                          variant="secondary"
+                          className="bg-green-100 text-green-800"
+                        >
                           Valid
                         </Badge>
                       ) : (
-                        <Badge variant="secondary" className="bg-red-100 text-red-800">
+                        <Badge
+                          variant="secondary"
+                          className="bg-red-100 text-red-800"
+                        >
                           Invalid Format
                         </Badge>
                       )}
@@ -272,15 +300,21 @@ export function CSVPreview({ data, file }: CSVPreviewProps) {
 
         <div className="flex items-center justify-between">
           <div className="text-sm text-muted-foreground">
-            Showing {startIndex + 1}-{Math.min(startIndex + itemsPerPage, sortedAndFilteredData.length)} of {sortedAndFilteredData.length} orders
+            Showing {startIndex + 1}-
+            {Math.min(startIndex + itemsPerPage, sortedAndFilteredData.length)}{" "}
+            of {sortedAndFilteredData.length} orders
           </div>
-          
+
           <Pagination>
             <PaginationContent>
               <PaginationItem>
-                <PaginationPrevious 
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                <PaginationPrevious
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  className={
+                    currentPage === 1
+                      ? "pointer-events-none opacity-50"
+                      : "cursor-pointer"
+                  }
                 />
               </PaginationItem>
               <PaginationItem>
@@ -289,9 +323,15 @@ export function CSVPreview({ data, file }: CSVPreviewProps) {
                 </div>
               </PaginationItem>
               <PaginationItem>
-                <PaginationNext 
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                <PaginationNext
+                  onClick={() =>
+                    setCurrentPage((p) => Math.min(totalPages, p + 1))
+                  }
+                  className={
+                    currentPage === totalPages
+                      ? "pointer-events-none opacity-50"
+                      : "cursor-pointer"
+                  }
                 />
               </PaginationItem>
             </PaginationContent>

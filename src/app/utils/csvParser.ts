@@ -12,33 +12,39 @@ type Matrix = number[][];
 // Simple validation schema mimicking Zod's behavior
 const OrderSchema = {
   parse: (data: unknown): ParsedOrder => {
-    if (!data || typeof data !== 'object') {
-      throw new Error('Invalid order data');
+    if (!data || typeof data !== "object") {
+      throw new Error("Invalid order data");
     }
 
     const order = data as Partial<ParsedOrder>;
 
     // Validate order number
-    if (typeof order.orderNumber !== 'string' || order.orderNumber.trim() === '') {
-      throw new Error('Order number is required and must be a non-empty string');
+    if (
+      typeof order.orderNumber !== "string" ||
+      order.orderNumber.trim() === ""
+    ) {
+      throw new Error(
+        "Order number is required and must be a non-empty string",
+      );
     }
 
     // Validate shipping status (defaulting to "Desconhecido" if not provided)
-    order.shippingStatus = typeof order.shippingStatus === 'string' 
-      ? order.shippingStatus 
-      : "Desconhecido";
+    order.shippingStatus =
+      typeof order.shippingStatus === "string"
+        ? order.shippingStatus
+        : "Desconhecido";
 
     // Validate tracking code (allow null or string)
-    if (order.trackingCode !== null && typeof order.trackingCode !== 'string') {
-      throw new Error('Tracking code must be a string or null');
+    if (order.trackingCode !== null && typeof order.trackingCode !== "string") {
+      throw new Error("Tracking code must be a string or null");
     }
 
     return {
       orderNumber: order.orderNumber,
       shippingStatus: order.shippingStatus,
-      trackingCode: order.trackingCode ?? null
+      trackingCode: order.trackingCode ?? null,
     };
-  }
+  },
 };
 
 export class CSVParser {
@@ -46,6 +52,8 @@ export class CSVParser {
     orderNumber: [
       "numero do pedido",
       "número do pedido",
+      "N�mero do Pedido",
+
       "order number",
       "ordernumber",
       "pedido",
@@ -82,8 +90,8 @@ export class CSVParser {
   }
 
   private static createMatrix(rows: number, cols: number): Matrix {
-    return Array.from({ length: rows }, () => 
-      Array.from({ length: cols }, () => 0)
+    return Array.from({ length: rows }, () =>
+      Array.from({ length: cols }, () => 0),
     );
   }
 
@@ -157,20 +165,41 @@ export class CSVParser {
     shippingStatus: string;
     trackingCode: string;
   } {
-    return headers.reduce(
-      (acc, header) => {
-        acc.orderNumber ??= 
-          this.findBestMatch(header, this.COLUMN_VARIANTS.orderNumber) ?? "";
-        acc.shippingStatus ??= 
-          this.findBestMatch(header, this.COLUMN_VARIANTS.shippingStatus) ?? "";
-        acc.trackingCode ??= 
-          this.findBestMatch(header, this.COLUMN_VARIANTS.trackingCode) ?? "";
-        return acc;
-      },
-      { orderNumber: "", shippingStatus: "", trackingCode: "" },
-    );
+    const normalizedHeaders = headers.map((h) => this.normalizeText(h));
+
+    const matchColumn = (variants: string[]) => {
+      for (const variant of variants) {
+        const normalizedVariant = this.normalizeText(variant);
+        const matchIndex = normalizedHeaders.findIndex(
+          (h) => h.includes(normalizedVariant) || normalizedVariant.includes(h),
+        );
+
+        if (matchIndex !== -1) {
+          return headers[matchIndex];
+        }
+      }
+      return "";
+    };
+
+    return {
+      orderNumber: matchColumn([  
+        ...this.COLUMN_VARIANTS.orderNumber,
+        "numero",
+        "pedido",
+      ]) ?? "",
+      shippingStatus: matchColumn([
+        ...this.COLUMN_VARIANTS.shippingStatus,
+        "status",
+        "envio",
+      ]) ?? "",
+      trackingCode: matchColumn([
+        ...this.COLUMN_VARIANTS.trackingCode,
+        "rastreio",
+        "tracking",
+      ]) ?? "",
+    };
   }
-  
+
   static async parseOrders(file: File): Promise<ParsedOrder[]> {
     return new Promise((resolve, reject) => {
       Papa.parse<Record<string, string>>(file, {
@@ -194,20 +223,21 @@ export class CSVParser {
                 );
 
                 if (!orderNumber) return null;
-                
+
                 // Validate and parse the order
                 try {
                   return OrderSchema.parse({
                     orderNumber,
                     shippingStatus,
-                    trackingCode
+                    trackingCode,
                   });
                 } catch (validationError) {
                   // Use type guard to ensure error is an Error object
-                  const errorMessage = validationError instanceof Error 
-                    ? validationError.message 
-                    : String(validationError);
-                  
+                  const errorMessage =
+                    validationError instanceof Error
+                      ? validationError.message
+                      : String(validationError);
+
                   console.warn(`Skipping invalid order: ${errorMessage}`);
                   return null;
                 }
