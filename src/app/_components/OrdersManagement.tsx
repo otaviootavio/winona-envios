@@ -232,7 +232,7 @@ export function OrdersManagement() {
                 <TableRow key={order.id}>
                   <TableCell>{order.orderNumber}</TableCell>
                   <TableCell>{order.shippingStatus}</TableCell>
-                  <TableCell>{order.trackingCode || "-"}</TableCell>
+                  <TableCell>{order.trackingCode ?? "-"}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
