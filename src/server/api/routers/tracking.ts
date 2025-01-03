@@ -1,20 +1,11 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { TRPCError } from "@trpc/server";
-// import { InfoSimplesCorreiosClient } from "~/app/api/repositories/InfoSimplesCorreiosClient";
-import { env } from "~/env";
+import { OrderStatus } from "@prisma/client";
 import { InfoSimplesCorreiosMockClient } from "~/app/api/repositories/InfoSimplesMockClient";
 
-// Initialize the client
-// const correiosClient = new InfoSimplesCorreiosClient({
-//   token: env.INFOSIMPLES_SECRET!,
-// });
+const correiosClient = new InfoSimplesCorreiosMockClient({ token: "" });
 
-const correiosClient = new InfoSimplesCorreiosMockClient({
-  token: env.INFOSIMPLES_SECRET,
-});
-
-// Schemas for input validation
 const trackingCodeSchema = z.object({
   trackingCode: z.string().trim().min(1),
 });
@@ -25,7 +16,6 @@ const updateTrackingSchema = z.object({
 });
 
 export const trackingRouter = createTRPCRouter({
-  // Query tracking status
   getStatus: protectedProcedure
     .input(trackingCodeSchema)
     .query(async ({ input }) => {
@@ -56,7 +46,6 @@ export const trackingRouter = createTRPCRouter({
       }
     }),
 
-  // Update order with new tracking information
   updateTracking: protectedProcedure
     .input(updateTrackingSchema)
     .mutation(async ({ ctx, input }) => {
@@ -81,12 +70,28 @@ export const trackingRouter = createTRPCRouter({
           input.trackingCode,
         );
 
+        // Handle successful tracking
         if (trackingInfo.code === 200 && trackingInfo.data_count > 0) {
+          // Determine status based on tracking response
+          const situacao = trackingInfo.data[0]?.situacao?.toLowerCase() ?? "";
+          let newStatus: OrderStatus;
+
+          if (situacao.includes("entregue")) {
+            newStatus = OrderStatus.DELIVERED;
+          } else if (
+            situacao.includes("trânsito") ||
+            situacao.includes("transito")
+          ) {
+            newStatus = OrderStatus.IN_TRANSIT;
+          } else {
+            newStatus = OrderStatus.POSTED;
+          }
+
           const updatedOrder = await ctx.db.order.update({
             where: { id: input.orderId },
             data: {
               trackingCode: input.trackingCode,
-              shippingStatus: "Enviado!",
+              shippingStatus: newStatus,
             },
           });
 
@@ -101,30 +106,32 @@ export const trackingRouter = createTRPCRouter({
           };
         }
 
+        // Handle not found tracking
         if (trackingInfo.code !== 200 || trackingInfo.data_count === 0) {
           const updatedOrder = await ctx.db.order.update({
             where: { id: input.orderId },
             data: {
-              shippingStatus: "Não encontrado.",
+              shippingStatus: OrderStatus.NOT_FOUND,
             },
           });
-          
+
           return {
             success: true,
             order: updatedOrder,
             trackingInfo: {
-              status: "Não encontrado.",
+              status: "Not Found",
               lastUpdate: null,
               history: [],
             },
           };
         }
 
+        // Fallback case (shouldn't normally occur)
         return {
           success: true,
           order,
           trackingInfo: {
-            status: "Unsent",
+            status: "Unknown",
             lastUpdate: null,
             history: [],
           },
@@ -138,7 +145,6 @@ export const trackingRouter = createTRPCRouter({
       }
     }),
 
-  // Verify if tracking code exists
   verifyTrackingCode: protectedProcedure
     .input(trackingCodeSchema)
     .query(async ({ input }) => {
@@ -156,7 +162,6 @@ export const trackingRouter = createTRPCRouter({
       }
     }),
 
-  // Batch update tracking information for multiple orders
   batchUpdateTracking: protectedProcedure
     .input(
       z.object({
@@ -164,7 +169,6 @@ export const trackingRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      // Get all orders with tracking codes
       const orders = await ctx.db.order.findMany({
         where: {
           id: { in: input.orderIds },
@@ -185,17 +189,33 @@ export const trackingRouter = createTRPCRouter({
             );
 
             if (trackingInfo.code === 200 && trackingInfo.data_count > 0) {
+              // Determine status based on tracking response
+              const situacao =
+                trackingInfo.data[0]?.situacao?.toLowerCase() ?? "";
+              let newStatus: OrderStatus;
+
+              if (situacao.includes("entregue")) {
+                newStatus = OrderStatus.DELIVERED;
+              } else if (
+                situacao.includes("trânsito") ||
+                situacao.includes("transito")
+              ) {
+                newStatus = OrderStatus.IN_TRANSIT;
+              } else {
+                newStatus = OrderStatus.POSTED;
+              }
+
               return ctx.db.order.update({
                 where: { id: order.id },
                 data: {
-                  shippingStatus: "Enviado!",
+                  shippingStatus: newStatus,
                 },
               });
             } else {
               return ctx.db.order.update({
                 where: { id: order.id },
                 data: {
-                  shippingStatus: "Não encontrado.",
+                  shippingStatus: OrderStatus.NOT_FOUND,
                 },
               });
             }
@@ -218,4 +238,82 @@ export const trackingRouter = createTRPCRouter({
         successfulUpdates: successCount,
       };
     }),
+
+  batchUpdateAllOrders: protectedProcedure.mutation(async ({ ctx }) => {
+    try {
+      // Get all orders with tracking codes for the current user
+      const orders = await ctx.db.order.findMany({
+        where: {
+          trackingCode: { not: null },
+          orderImport: {
+            userId: ctx.session.user.id,
+          },
+        },
+      });
+
+      const updates = await Promise.allSettled(
+        orders.map(async (order) => {
+          if (!order.trackingCode) return null;
+
+          try {
+            const trackingInfo = await correiosClient.trackPackage(
+              order.trackingCode,
+            );
+
+            if (trackingInfo.code === 200 && trackingInfo.data_count > 0) {
+              const situacao =
+                trackingInfo.data[0]?.situacao?.toLowerCase() ?? "";
+              let newStatus: OrderStatus;
+
+              if (situacao.includes("entregue")) {
+                newStatus = OrderStatus.DELIVERED;
+              } else if (
+                situacao.includes("trânsito") ||
+                situacao.includes("transito")
+              ) {
+                newStatus = OrderStatus.IN_TRANSIT;
+              } else {
+                newStatus = OrderStatus.POSTED;
+              }
+
+              return ctx.db.order.update({
+                where: { id: order.id },
+                data: {
+                  shippingStatus: newStatus,
+                },
+              });
+            } else {
+              return ctx.db.order.update({
+                where: { id: order.id },
+                data: {
+                  shippingStatus: OrderStatus.NOT_FOUND,
+                },
+              });
+            }
+          } catch (error) {
+            console.error(
+              `Failed to update tracking for order ${order.id}:`,
+              error,
+            );
+            return null;
+          }
+        }),
+      );
+
+      const successCount = updates.filter(
+        (result) => result.status === "fulfilled" && result.value !== null,
+      ).length;
+
+      return {
+        totalProcessed: orders.length,
+        successfulUpdates: successCount,
+      };
+    } catch (error) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Failed to update orders",
+        cause: error,
+      });
+    }
+  }),
 });

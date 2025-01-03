@@ -1,4 +1,4 @@
-import { type Order } from "@prisma/client";
+import { type Order, type OrderStatus } from "@prisma/client";
 import {
   Table,
   TableBody,
@@ -10,30 +10,33 @@ import {
 import { Button } from "~/components/ui/button";
 import { api } from "~/trpc/react";
 import { useToast } from "~/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, ArrowUpDown } from "lucide-react";
 import { Badge } from "~/components/ui/badge";
 import { useState } from "react";
 
 interface OrdersTableProps {
   orders: Order[];
   isLoading: boolean;
-  onBatchUpdate?: () => void;
+  onSort: (field: "orderNumber" | "updatedAt") => void;
+  sortBy: "orderNumber" | "updatedAt";
+  sortOrder: "asc" | "desc";
 }
 
 export function OrdersTable({
   orders,
   isLoading,
-  onBatchUpdate,
+  onSort,
+  sortBy,
+  sortOrder,
 }: OrdersTableProps) {
   const utils = api.useUtils();
-
   const { toast } = useToast();
-  // Track loading state per order
   const [updatingOrders, setUpdatingOrders] = useState<Set<string>>(new Set());
+  const [isUpdatingAll, setIsUpdatingAll] = useState(false);
 
   const updateTracking = api.tracking.updateTracking.useMutation({
     onMutate: (variables) => {
-      setUpdatingOrders(prev => {  return new Set(prev).add(variables.orderId)});
+      setUpdatingOrders(prev => new Set(prev).add(variables.orderId));
     },
     onSettled: (_, __, variables) => {
       setUpdatingOrders(prev => {
@@ -44,7 +47,6 @@ export function OrdersTable({
     },
     onSuccess: async () => {
       await utils.order.invalidate();
-
       toast({
         title: "Success",
         description: "Tracking information updated",
@@ -59,44 +61,96 @@ export function OrdersTable({
     },
   });
 
-  const getTrackingStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case "entregue":
-        return "bg-green-100 text-green-800";
-      case "em trânsito":
-        return "bg-blue-100 text-blue-800";
-      case "postado":
+  // Add new mutation for updating all orders
+  const batchUpdateAll = api.tracking.batchUpdateAllOrders.useMutation({
+    onMutate: () => {
+      setIsUpdatingAll(true);
+    },
+    onSettled: () => {
+      setIsUpdatingAll(false);
+    },
+    onSuccess: async (data) => {
+      await utils.order.invalidate();
+      toast({
+        title: "Batch Update Complete",
+        description: `Successfully updated ${data.successfulUpdates} out of ${data.totalProcessed} orders`,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const getTrackingStatusColor = (status: OrderStatus) => {
+    switch (status) {
+      case "POSTED":
         return "bg-yellow-100 text-yellow-800";
+      case "IN_TRANSIT":
+        return "bg-blue-100 text-blue-800";
+      case "DELIVERED":
+        return "bg-green-100 text-green-800";
+      case "NOT_FOUND":
+        return "bg-red-100 text-red-800";
+      case "UNKNOWN":
       default:
         return "bg-gray-100 text-gray-800";
     }
   };
 
+  const getSortIcon = (field: "orderNumber" | "updatedAt") => {
+    if (sortBy !== field) return <ArrowUpDown className="ml-2 h-4 w-4" />;
+    return (
+      <ArrowUpDown 
+        className={`ml-2 h-4 w-4 ${sortOrder === "asc" ? "rotate-0" : "rotate-180"}`} 
+      />
+    );
+  };
+
+  const renderSortableHeader = (field: "orderNumber" | "updatedAt", label: string) => (
+    <Button
+      variant="ghost"
+      onClick={() => onSort(field)}
+      className="h-8 flex items-center gap-1 font-semibold"
+    >
+      {label}
+      {getSortIcon(field)}
+    </Button>
+  );
+
   return (
     <div className="rounded-md border">
       <div className="flex items-center justify-between p-4">
         <h2 className="text-lg font-semibold">Orders List</h2>
-        {onBatchUpdate && (
-          <Button
-            onClick={onBatchUpdate}
-            disabled={isLoading || orders.length === 0}
-          >
-            {isLoading ? (
+        <Button
+          onClick={() => batchUpdateAll.mutate()}
+          disabled={isUpdatingAll || orders.length === 0}
+        >
+          {isUpdatingAll ? (
+            <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              "Update All Tracking"
-            )}
-          </Button>
-        )}
+              Updating All Orders...
+            </>
+          ) : (
+            "Update All Orders"
+          )}
+        </Button>
       </div>
 
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Order Number</TableHead>
+            <TableHead>
+              {renderSortableHeader("orderNumber", "Order Number")}
+            </TableHead>
             <TableHead>Shipping Status</TableHead>
             <TableHead>Tracking Code</TableHead>
-            <TableHead>Last Update</TableHead>
+            <TableHead>
+              {renderSortableHeader("updatedAt", "Last Update")}
+            </TableHead>
             <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -115,7 +169,7 @@ export function OrdersTable({
               </TableCell>
             </TableRow>
           ) : (
-            orders.sort((a, b) => a.orderNumber.localeCompare(b.orderNumber)).map((order) => (
+            orders.map((order) => (
               <TableRow key={order.id}>
                 <TableCell>{order.orderNumber}</TableCell>
                 <TableCell>

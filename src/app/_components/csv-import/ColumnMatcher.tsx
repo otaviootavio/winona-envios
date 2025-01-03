@@ -22,8 +22,6 @@ interface ColumnMatcherProps {
 }
 
 export function ColumnMatcher({ 
-  headers, 
-  sampleData, 
   suggestedMatches,
   onConfirm, 
   onCancel 

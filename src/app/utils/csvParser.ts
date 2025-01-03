@@ -1,6 +1,6 @@
 import Papa from "papaparse";
 import type { ParseResult } from "papaparse";
-import type { Order } from "@prisma/client";
+import type { Order, OrderStatus } from "@prisma/client";
 
 export type ParsedOrder = Pick<
   Order,
@@ -9,7 +9,6 @@ export type ParsedOrder = Pick<
 
 type Matrix = number[][];
 
-// Simple validation schema mimicking Zod's behavior
 const OrderSchema = {
   parse: (data: unknown): ParsedOrder => {
     if (!data || typeof data !== "object") {
@@ -28,11 +27,8 @@ const OrderSchema = {
       );
     }
 
-    // Validate shipping status (defaulting to "Desconhecido" if not provided)
-    order.shippingStatus =
-      typeof order.shippingStatus === "string"
-        ? order.shippingStatus
-        : "Desconhecido";
+    // Validate shipping status (defaulting to UNKNOWN if not provided)
+    order.shippingStatus = "UNKNOWN";
 
     // Validate tracking code (allow null or string)
     if (order.trackingCode !== null && typeof order.trackingCode !== "string") {
@@ -41,7 +37,7 @@ const OrderSchema = {
 
     return {
       orderNumber: order.orderNumber,
-      shippingStatus: order.shippingStatus,
+      shippingStatus: order.shippingStatus as OrderStatus,
       trackingCode: order.trackingCode ?? null,
     };
   },
@@ -53,7 +49,6 @@ export class CSVParser {
       "numero do pedido",
       "número do pedido",
       "N�mero do Pedido",
-
       "order number",
       "ordernumber",
       "pedido",
@@ -217,7 +212,6 @@ export class CSVParser {
                 const orderNumber = this.cleanValue(
                   row[columns.orderNumber] ?? "",
                 );
-                const shippingStatus = "Desconhecido";
                 const trackingCode = this.cleanValue(
                   row[columns.trackingCode] ?? "",
                 );
@@ -228,11 +222,9 @@ export class CSVParser {
                 try {
                   return OrderSchema.parse({
                     orderNumber,
-                    shippingStatus,
                     trackingCode,
                   });
                 } catch (validationError) {
-                  // Use type guard to ensure error is an Error object
                   const errorMessage =
                     validationError instanceof Error
                       ? validationError.message

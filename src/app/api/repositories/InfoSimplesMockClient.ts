@@ -1,4 +1,4 @@
-import { type InfoSimplesApiResponse, type InfoSimplesClientConfig, TrackingData, TrackingHistoryEvent } from "./types";
+import { type InfoSimplesApiResponse, type InfoSimplesClientConfig, type TrackingData, type TrackingHistoryEvent } from "./types";
   
   export class InfoSimplesCorreiosMockClient {
     private readonly mockDelay: number;

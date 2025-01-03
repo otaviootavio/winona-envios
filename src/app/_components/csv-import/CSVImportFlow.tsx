@@ -12,9 +12,9 @@ import {
   CardTitle,
 } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
-import { ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { CSVFileUpload } from './CSVFileUpload';
-import { CSVPreview } from './CSVPreview.tsx';
+import { CSVPreview } from './CSVPreview';
 import { CSVSubmission } from './CSVSubmission';
 
 type ImportStep = "upload" | "preview" | "submit";
