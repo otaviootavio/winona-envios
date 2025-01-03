@@ -1,54 +1,41 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
+import { Upload } from "lucide-react";
 
 interface FileUploadCardProps {
-  onFileSelect: (file: File) => Promise<void>;
-  isUploading: boolean;
-  isPending: boolean;
   latestImport?: {
     totalOrders: number;
     fileName: string;
   };
 }
 
-export function FileUploadCard({
-  onFileSelect,
-  isUploading,
-  isPending,
-  latestImport
-}: FileUploadCardProps) {
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      await onFileSelect(file);
-      // Reset the input
-      event.target.value = '';
-    }
-  };
+export function FileUploadCard({ latestImport }: FileUploadCardProps) {
+  const router = useRouter();
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Import Orders</CardTitle>
-        <CardDescription>Upload your CSV file to import orders</CardDescription>
+        <CardDescription>Upload and validate your orders data</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          <input
-            type="file"
-            accept=".csv"
-            onChange={handleFileChange}
-            className="hidden"
-            id="csv-upload"
-          />
-          <Button asChild disabled={isUploading || isPending}>
-            <label htmlFor="csv-upload" className="cursor-pointer">
-              {isUploading ? "Uploading..." : "Upload CSV"}
-            </label>
-          </Button>
+          <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-6">
+            <Upload className="mb-4 h-8 w-8 text-muted-foreground" />
+            <Button 
+              onClick={() => router.push('/import')}
+              className="w-full sm:w-auto"
+            >
+              Import New Orders
+            </Button>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Use our new improved import process with validation and preview
+            </p>
+          </div>
 
           {latestImport && latestImport.totalOrders > 0 && (
             <Alert>

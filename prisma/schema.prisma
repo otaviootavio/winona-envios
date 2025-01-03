@@ -75,11 +75,13 @@ model VerificationToken {
 }
 
 // Existing models remain unchanged...
-
+// TODO 
+// IS IT REALLY NECESSARY?
 // New models for order management
 model OrderImport {
     id        String   @id @default(cuid())
     createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
     status    String   // e.g., 'processing', 'completed', 'failed'
     fileName  String
     
@@ -94,7 +96,7 @@ model OrderImport {
 model Order {
     id                String      @id @default(cuid())
     orderNumber      String      // original order number from the shop
-    shippingStatus   String      // status from the shop
+    shippingStatus OrderStatus @default(UNKNOWN)
     trackingCode     String?     // tracking code if available
     
     // Import batch reference
@@ -108,3 +110,11 @@ model Order {
     @@index([trackingCode])
 }
 
+
+enum OrderStatus {
+  UNKNOWN     @map("DESCONHECIDO")  // Initial state
+  POSTED      @map("POSTADO")       // Found in Correios
+  NOT_FOUND   @map("NAO_ENCONTRADO") // Not found in Correios
+  IN_TRANSIT  @map("EM_TRANSITO")   // When tracking shows movement
+  DELIVERED   @map("ENTREGUE")      // When tracking shows delivery
+}
