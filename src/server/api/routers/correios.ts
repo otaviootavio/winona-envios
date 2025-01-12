@@ -14,11 +14,24 @@ export const correiosRouter = createTRPCRouter({
         accessCode: z.string().min(1, "Código de acesso é obrigatório"),
         contract: z.string().min(1, "Contrato é obrigatório"),
         regionalNumber: z.number().optional(), // DR number is optional
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       try {
-        // Save credentials to database
+        // Validate credentials first
+        const authRepo = new CorreiosAuthRepository();
+        await authRepo.authenticateWithContract(
+          {
+            identifier: input.identifier,
+            accessCode: input.accessCode,
+          },
+          {
+            numero: input.contract,
+            dr: input.regionalNumber,
+          },
+        );
+
+        // Only save if validation was successful
         const credentials = await ctx.db.correiosCredential.upsert({
           where: {
             userId: ctx.session.user.id,
@@ -36,25 +49,15 @@ export const correiosRouter = createTRPCRouter({
           },
         });
 
-        // Test the credentials immediately
-        const authRepo = new CorreiosAuthRepository();
-        await authRepo.authenticateWithContract(
-          {
-            identifier: input.identifier,
-            accessCode: input.accessCode,
-          },
-          {
-            numero: input.contract,
-            dr: input.regionalNumber,
-          }
-        );
-
         return { success: true, credentials };
       } catch (error) {
-        console.error("Failed to save or validate credentials:", error);
+        console.error("Failed to validate or save credentials:", error);
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: error instanceof Error ? error.message : "Erro ao salvar credenciais",
+          message:
+            error instanceof Error
+              ? error.message
+              : "Credenciais inválidas ou erro ao salvar",
         });
       }
     }),
@@ -72,47 +75,6 @@ export const correiosRouter = createTRPCRouter({
       throw new TRPCError({
         code: "INTERNAL_SERVER_ERROR",
         message: "Erro ao buscar credenciais",
-      });
-    }
-  }),
-
-  // Add a new procedure to test authentication
-  testAuth: protectedProcedure.mutation(async ({ ctx }) => {
-    try {
-      const credentials = await ctx.db.correiosCredential.findUnique({
-        where: {
-          userId: ctx.session.user.id,
-        },
-      });
-
-      if (!credentials) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Credenciais não encontradas",
-        });
-      }
-
-      const authRepo = new CorreiosAuthRepository();
-      const authResult = await authRepo.authenticateWithContract(
-        {
-          identifier: credentials.identifier,
-          accessCode: credentials.accessCode,
-        },
-        {
-          numero: credentials.contract,
-        }
-      );
-
-      return {
-        success: true,
-        tokenExpiration: authResult.expiraEm,
-        environment: authResult.ambiente,
-      };
-    } catch (error) {
-      console.error("Auth test failed:", error);
-      throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: error instanceof Error ? error.message : "Erro ao testar autenticação",
       });
     }
   }),
