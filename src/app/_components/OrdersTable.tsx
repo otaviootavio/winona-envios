@@ -36,10 +36,10 @@ export function OrdersTable({
 
   const updateTracking = api.tracking.updateTracking.useMutation({
     onMutate: (variables) => {
-      setUpdatingOrders(prev => new Set(prev).add(variables.orderId));
+      setUpdatingOrders((prev) => new Set(prev).add(variables.orderId));
     },
     onSettled: (_, __, variables) => {
-      setUpdatingOrders(prev => {
+      setUpdatingOrders((prev) => {
         const next = new Set(prev);
         next.delete(variables.orderId);
         return next;
@@ -104,17 +104,20 @@ export function OrdersTable({
   const getSortIcon = (field: "orderNumber" | "updatedAt") => {
     if (sortBy !== field) return <ArrowUpDown className="ml-2 h-4 w-4" />;
     return (
-      <ArrowUpDown 
-        className={`ml-2 h-4 w-4 ${sortOrder === "asc" ? "rotate-0" : "rotate-180"}`} 
+      <ArrowUpDown
+        className={`ml-2 h-4 w-4 ${sortOrder === "asc" ? "rotate-0" : "rotate-180"}`}
       />
     );
   };
 
-  const renderSortableHeader = (field: "orderNumber" | "updatedAt", label: string) => (
+  const renderSortableHeader = (
+    field: "orderNumber" | "updatedAt",
+    label: string,
+  ) => (
     <Button
       variant="ghost"
       onClick={() => onSort(field)}
-      className="h-8 flex items-center gap-1 font-semibold"
+      className="flex h-8 items-center gap-1 font-semibold"
     >
       {label}
       {getSortIcon(field)}
@@ -181,7 +184,15 @@ export function OrdersTable({
                   </Badge>
                 </TableCell>
                 <TableCell>{order.trackingCode ?? "N/A"}</TableCell>
-                <TableCell>{order.updatedAt.toLocaleDateString()}</TableCell>
+                <TableCell>
+                  {new Date(order.updatedAt).toLocaleString("pt-BR", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </TableCell>
                 <TableCell>
                   {order.trackingCode && (
                     <Button

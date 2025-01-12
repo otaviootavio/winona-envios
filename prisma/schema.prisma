@@ -64,6 +64,7 @@ model User {
     sessions      Session[]
     posts         Post[]
     orderImports  OrderImport[]
+    correiosCredential CorreiosCredential?
 }
 
 model VerificationToken {
@@ -117,4 +118,19 @@ enum OrderStatus {
   NOT_FOUND   @map("NAO_ENCONTRADO") // Not found in Correios
   IN_TRANSIT  @map("EM_TRANSITO")   // When tracking shows movement
   DELIVERED   @map("ENTREGUE")      // When tracking shows delivery
+}
+
+model CorreiosCredential {
+    id            String   @id @default(cuid())
+    identifier    String   // CNPJ or CPF
+    accessCode    String   // Encrypted access code
+    contract      String   // Contract number
+    createdAt     DateTime @default(now())
+    updatedAt     DateTime @updatedAt
+    
+    // Relationship with User
+    user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    userId        String   @unique // One-to-one relationship with User
+
+    @@index([identifier])
 }
