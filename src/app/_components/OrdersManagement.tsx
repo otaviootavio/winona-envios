@@ -44,19 +44,20 @@ export function OrdersManagement() {
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<OrderStatus | undefined>();
-  const [hasTrackingFilter, setHasTrackingFilter] = useState<boolean | undefined>();
-  const [sortBy, setSortBy] = useState<SortableFieldValue>(SortableFields.ORDER_NUMBER);
+  const [sortBy, setSortBy] = useState<SortableFieldValue>(
+    SortableFields.ORDER_NUMBER,
+  );
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
   // Data fetching
   const importSummary = api.order.getImportsSummary.useQuery();
   const { data: credentials } = api.correios.getCredentials.useQuery();
-  
+
   const latestImportId = importSummary.data?.[0]?.id;
 
   const { data: orderStats } = api.order.getOrderStats.useQuery(
     { importId: latestImportId ?? "" },
-    { enabled: !!latestImportId }
+    { enabled: !!latestImportId },
   );
 
   const orders = api.order.getImportOrders.useQuery(
@@ -67,26 +68,32 @@ export function OrdersManagement() {
       filters: {
         search: searchTerm || undefined,
         status: statusFilter,
-        hasTracking: hasTrackingFilter,
       },
       sortBy,
       sortOrder,
     },
-    { enabled: !!latestImportId }
+    { enabled: !!latestImportId },
   );
+
+  // Prepare chart data
+  const chartData =
+    orderStats?.statusBreakdown.map((stat) => ({
+      name: stat.shippingStatus,
+      value: stat._count,
+    })) ?? [];
 
   // Mutations
   const batchUpdate = api.tracking.batchUpdateTracking.useMutation({
     onSuccess: async (data) => {
       await utils.order.invalidate();
       toast({
-        title: "Atualização em Lote Concluída",
-        description: `${data.successfulUpdates} de ${data.totalProcessed} pedidos foram atualizados com sucesso`,
+        title: "Batch Update Completed",
+        description: `${data.successfulUpdates} out of ${data.totalProcessed} orders were successfully updated`,
       });
     },
     onError: (error) => {
       toast({
-        title: "Erro",
+        title: "Error",
         description: error.message,
         variant: "destructive",
       });
@@ -96,7 +103,7 @@ export function OrdersManagement() {
   // Handlers
   const handleSort = (field: SortableFieldValue) => {
     if (field === sortBy) {
-      setSortOrder(current => current === "asc" ? "desc" : "asc");
+      setSortOrder((current) => (current === "asc" ? "desc" : "asc"));
     } else {
       setSortBy(field);
       setSortOrder("asc");
@@ -112,8 +119,8 @@ export function OrdersManagement() {
     return (
       <div className="flex h-[50vh] items-center justify-center">
         <Alert variant="destructive">
-          <AlertTitle>Não Autorizado</AlertTitle>
-          <AlertDescription>Por favor, faça login para visualizar os pedidos.</AlertDescription>
+          <AlertTitle>Unauthorized</AlertTitle>
+          <AlertDescription>Please log in to view orders.</AlertDescription>
         </Alert>
       </div>
     );
@@ -124,14 +131,16 @@ export function OrdersManagement() {
     return (
       <Card className="w-full">
         <CardHeader>
-          <CardTitle>Importar Pedidos</CardTitle>
-          <CardDescription>Comece importando seus pedidos para rastreá-los</CardDescription>
+          <CardTitle>Import Orders</CardTitle>
+          <CardDescription>
+            Start by importing your orders to track them
+          </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col items-center gap-4">
           <p className="text-center text-muted-foreground">
-            Para começar, você precisa importar seus pedidos primeiro.
+            To get started, you need to import your orders first.
           </p>
-          <Button onClick={() => router.push("/import")}>Importar Pedidos</Button>
+          <Button onClick={() => router.push("/import")}>Import Orders</Button>
         </CardContent>
       </Card>
     );
@@ -142,15 +151,18 @@ export function OrdersManagement() {
     return (
       <Card className="w-full">
         <CardHeader>
-          <CardTitle>Configurar Credenciais</CardTitle>
-          <CardDescription>Configure suas credenciais dos Correios para rastrear seus pedidos importados</CardDescription>
+          <CardTitle>Configure Credentials</CardTitle>
+          <CardDescription>
+            Set up your Correios credentials to track your imported orders
+          </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col items-center gap-4">
           <p className="text-center text-muted-foreground">
-            Seus pedidos foram importados com sucesso! Agora, configure suas credenciais dos Correios para começar a rastreá-los.
+            Your orders have been successfully imported! Now, set up your
+            Correios credentials to start tracking them.
           </p>
           <Button onClick={() => router.push("/correios-settings")}>
-            Configurar Credenciais dos Correios
+            Configure Correios Credentials
           </Button>
         </CardContent>
       </Card>
@@ -172,37 +184,80 @@ export function OrdersManagement() {
       <FileUploadCard latestImport={importInfo} />
 
       {latestImport && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Visão Geral do Rastreamento</CardTitle>
-            <CardDescription>Status atual dos seus pedidos</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              <div className="rounded-lg border p-3">
-                <p className="text-sm font-medium">Total de Pedidos</p>
-                <p className="text-2xl font-bold">{totalOrders}</p>
-              </div>
-              <div className="rounded-lg border p-3">
-                <p className="text-sm font-medium">Com Rastreamento</p>
-                <p className="text-2xl font-bold">{trackingCount}</p>
-              </div>
-              <div className="rounded-lg border p-3">
-                <p className="text-sm font-medium">Data da Importação</p>
-                <p className="text-2xl font-bold">
-                  {latestImport.createdAt.toLocaleDateString()}
-                </p>
-              </div>
+        <>
+          <div className="flex flex-row gap-2">
+            <div className="flex-1">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Tracking Overview</CardTitle>
+                  <CardDescription>
+                    Current status of your orders
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                    <div className="rounded-lg border p-3">
+                      <p className="text-sm font-medium">
+                        Total number of orders
+                      </p>
+                      <p className="text-2xl font-bold">{totalOrders}</p>
+                    </div>
+                    <div className="rounded-lg border p-3">
+                      <p className="text-sm font-medium">Tracking code</p>
+                      <p className="text-2xl font-bold">{trackingCount}</p>
+                    </div>
+                    <div className="rounded-lg border p-3">
+                      <p className="text-sm font-medium">Last update</p>
+                      <p className="text-2xl font-bold">
+                        {latestImport.createdAt.toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
-          </CardContent>
-        </Card>
+            <div className="flex-1">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Status Distribution</CardTitle>
+                  <CardDescription>Breakdown of order status</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-row justify-start gap-2">
+                    {chartData.map((stat) => (
+                      <div
+                        key={stat.name}
+                        className="flex-auto flex-col rounded-lg border p-2"
+                      >
+                        <div>
+                          <div className="rounded-full" />
+                          <span className="text-xs font-medium">
+                            {stat.name}
+                          </span>
+                        </div>
+                        <div className="flex items-baseline space-x-2">
+                          <span className="text-2xl font-bold">
+                            {stat.value}
+                          </span>
+                          <span className="text-sm text-muted-foreground">
+                            ({Math.round((stat.value / totalOrders) * 100)}%)
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </>
       )}
 
       <div className="mb-4 flex flex-col gap-4 md:flex-row">
         <div className="relative flex-1">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar por número do pedido ou código de rastreio..."
+            placeholder="Search by order number or tracking code..."
             value={searchTerm}
             onChange={(e) => {
               setSearchTerm(e.target.value);
@@ -214,36 +269,22 @@ export function OrdersManagement() {
         <Select
           value={statusFilter ?? "all"}
           onValueChange={(value) => {
-            setStatusFilter(value === "all" ? undefined : value as OrderStatus);
+            setStatusFilter(
+              value === "all" ? undefined : (value as OrderStatus),
+            );
             setPage(1);
           }}
         >
           <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Filtrar por status" />
+            <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todos os Status</SelectItem>
-            <SelectItem value={OrderStatus.POSTED}>Postado</SelectItem>
-            <SelectItem value={OrderStatus.NOT_FOUND}>Não Encontrado</SelectItem>
-            <SelectItem value={OrderStatus.IN_TRANSIT}>Em Trânsito</SelectItem>
-            <SelectItem value={OrderStatus.DELIVERED}>Entregue</SelectItem>
-            <SelectItem value={OrderStatus.UNKNOWN}>Desconhecido</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select
-          value={hasTrackingFilter === undefined ? "all" : hasTrackingFilter.toString()}
-          onValueChange={(value) => {
-            setHasTrackingFilter(value === "all" ? undefined : value === "true");
-            setPage(1);
-          }}
-        >
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Filtrar por rastreio" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os Pedidos</SelectItem>
-            <SelectItem value="true">Com Rastreio</SelectItem>
-            <SelectItem value="false">Sem Rastreio</SelectItem>
+            <SelectItem value="all">All Statuses</SelectItem>
+            <SelectItem value={OrderStatus.POSTED}>Posted</SelectItem>
+            <SelectItem value={OrderStatus.NOT_FOUND}>Not found</SelectItem>
+            <SelectItem value={OrderStatus.IN_TRANSIT}>In transit</SelectItem>
+            <SelectItem value={OrderStatus.DELIVERED}>Delivered</SelectItem>
+            <SelectItem value={OrderStatus.UNKNOWN}>Unknown</SelectItem>
           </SelectContent>
         </Select>
       </div>
