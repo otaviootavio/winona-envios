@@ -18,6 +18,9 @@ export async function Header() {
               <Button asChild variant="ghost">
                 <Link href="/dashboard">Dashboard</Link>
               </Button>
+              <Button asChild variant="ghost">
+                <Link href="/correios-settings">Settings</Link>
+              </Button>
               <Button asChild variant="outline">
                 <Link href="/api/auth/signout">Sign out</Link>
               </Button>
