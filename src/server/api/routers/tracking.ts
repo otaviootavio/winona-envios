@@ -268,9 +268,29 @@ export const trackingRouter = createTRPCRouter({
 
   batchUpdateAllOrders: protectedProcedure.mutation(async ({ ctx }) => {
     try {
+      // First, find the latest order import for the user
+      const latestImport = await ctx.db.orderImport.findFirst({
+        where: {
+          userId: ctx.session.user.id,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+
+      if (!latestImport) {
+        return {
+          totalProcessed: 0,
+          successfulUpdates: 0,
+          message: "No order imports found",
+        };
+      }
+
+      // Get all orders from the latest import that have tracking codes
       const orders = await ctx.db.order.findMany({
         where: {
           trackingCode: { not: null },
+          orderImportId: latestImport.id,
           orderImport: {
             userId: ctx.session.user.id,
           },
@@ -329,6 +349,8 @@ export const trackingRouter = createTRPCRouter({
       return {
         totalProcessed: orders.length,
         successfulUpdates: successCount,
+        importId: latestImport.id,
+        importDate: latestImport.createdAt,
       };
     } catch (error) {
       if (error instanceof TRPCError && error.code === "UNAUTHORIZED") {
