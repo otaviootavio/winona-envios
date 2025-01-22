@@ -65,6 +65,8 @@ model User {
     posts         Post[]
     orderImports  OrderImport[]
     correiosCredential CorreiosCredential?
+    ownedTeams       Team[]        @relation("TeamAdmin")
+    teamMemberships  TeamMember[]
 }
 
 model VerificationToken {
@@ -133,4 +135,55 @@ model CorreiosCredential {
     userId        String   @unique // One-to-one relationship with User
 
     @@index([identifier])
+
+    team             Team?         @relation("TeamCredential", fields: [teamId], references: [id])
+    teamId           String?       @unique  // One-to-one with Team
 }
+
+model Team {
+    id        String   @id @default(cuid())
+    name      String
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    // Team owner/admin
+    admin     User     @relation("TeamAdmin", fields: [adminId], references: [id])
+    adminId   String
+
+    // Team members
+    members   TeamMember[]
+
+    // Shared credentials
+    correiosCredential CorreiosCredential? @relation("TeamCredential")
+
+    @@index([adminId])
+    TeamInvite TeamInvite[]
+}
+
+model TeamMember {
+    id        String   @id @default(cuid())
+    createdAt DateTime @default(now())
+    
+    team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+    teamId    String
+    
+    user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    userId    String
+
+    @@unique([teamId, userId])
+    @@index([userId])
+}
+
+model TeamInvite {
+    id          String   @id @default(cuid())
+    token       String   @unique
+    teamId      String
+    team        Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+    createdAt   DateTime @default(now())
+    expiresAt   DateTime
+    usedAt      DateTime?
+    
+    @@index([token])
+    @@index([teamId])
+}
+
