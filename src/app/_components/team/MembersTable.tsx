@@ -17,6 +17,7 @@ interface MembersTableProps {
   teamId: string;
   adminId: string;
   currentUserId: string;
+  isPersonalTeam?: boolean;
 }
 
 type TeamWithMembers = Team & {
@@ -29,14 +30,17 @@ export function MembersTable({
   teamId,
   adminId,
   currentUserId,
+  isPersonalTeam = false,
 }: MembersTableProps) {
   const { toast } = useToast();
   const utils = api.useUtils();
 
-  // Fetch team data with members
-  const { data: team, isLoading } = api.team.getMyTeams.useQuery(undefined, {
-    select: (teams) => teams.find((t) => t.id === teamId) as TeamWithMembers,
-  });
+  const { data: team, isLoading } = isPersonalTeam
+    ? api.team.getPersonalTeam.useQuery()
+    : api.team.getMyTeams.useQuery(undefined, {
+        select: (teams) =>
+          teams.find((t) => t.id === teamId) as TeamWithMembers,
+      });
 
   const removeMemberMutation = api.team.removeMember.useMutation({
     onSuccess: () => {
@@ -44,7 +48,11 @@ export function MembersTable({
         title: "Member removed",
         description: "Team member has been removed successfully.",
       });
-      void utils.team.getMyTeams.invalidate();
+      if (isPersonalTeam) {
+        void utils.team.getPersonalTeam.invalidate();
+      } else {
+        void utils.team.getMyTeams.invalidate();
+      }
     },
     onError: (error) => {
       toast({
@@ -56,19 +64,7 @@ export function MembersTable({
   });
 
   if (isLoading) {
-    return (
-      <div>
-        <h3 className="mb-4 text-lg font-medium">Team Members</h3>
-        <div className="animate-pulse">
-          <div className="mb-4 h-8 w-full rounded bg-gray-200" />
-          <div className="space-y-3">
-            {[...new Array<undefined>(3)].map((_, i) => (
-              <div key={i} className="h-12 w-full rounded bg-gray-100" />
-            ))}
-          </div>
-        </div>
-      </div>
-    );
+    return <div>Loading...</div>;
   }
 
   if (!team) {
@@ -76,17 +72,22 @@ export function MembersTable({
   }
 
   const isAdmin = currentUserId === adminId;
+  const canManageMembers = isAdmin && !isPersonalTeam;
 
   return (
     <div>
-      <h3 className="mb-4 text-lg font-medium">Team Members</h3>
+      <h3 className="mb-4 text-lg font-medium">
+        {isPersonalTeam ? "Personal Team Members" : "Team Members"}
+      </h3>
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Email</TableHead>
             <TableHead>Name</TableHead>
             <TableHead>Role</TableHead>
-            {isAdmin && <TableHead className="w-24">Actions</TableHead>}
+            {canManageMembers && (
+              <TableHead className="w-24">Actions</TableHead>
+            )}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -98,28 +99,34 @@ export function MembersTable({
                 <Badge
                   variant={member.user.id === adminId ? "default" : "secondary"}
                 >
-                  {member.user.id === adminId ? "Admin" : "Member"}
+                  {isPersonalTeam
+                    ? "Personal"
+                    : member.user.id === adminId
+                      ? "Admin"
+                      : "Member"}
                 </Badge>
               </TableCell>
-              {isAdmin && member.user.id !== adminId && (
+              {canManageMembers && (
                 <TableCell>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    disabled={removeMemberMutation.isPending}
-                    onClick={() =>
-                      removeMemberMutation.mutate({
-                        teamId: team.id,
-                        userId: member.user.id,
-                      })
-                    }
-                  >
-                    {removeMemberMutation.isPending ? "Removing..." : "Remove"}
-                  </Button>
+                  {member.user.id !== adminId && (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      disabled={removeMemberMutation.isPending}
+                      onClick={() =>
+                        removeMemberMutation.mutate({
+                          teamId: team.id,
+                          userId: member.user.id,
+                        })
+                      }
+                    >
+                      {removeMemberMutation.isPending
+                        ? "Removing..."
+                        : "Remove"}
+                    </Button>
+                  )}
                 </TableCell>
               )}
-              {isAdmin && member.user.id === adminId && <TableCell></TableCell>}
-              {!isAdmin && <TableCell></TableCell>}
             </TableRow>
           ))}
         </TableBody>

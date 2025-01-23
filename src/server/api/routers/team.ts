@@ -1,13 +1,14 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
 import { TRPCError } from "@trpc/server";
-
 import { randomBytes } from "crypto";
+
 const INVITE_EXPIRY_HOURS = 24;
 
 // Input schemas
 const createTeamSchema = z.object({
   name: z.string().min(1, "Team name is required"),
+  isPersonal: z.boolean().optional().default(false),
 });
 
 const inviteLinkSchema = z.object({
@@ -27,10 +28,29 @@ export const teamRouter = createTRPCRouter({
     .input(createTeamSchema)
     .mutation(async ({ ctx, input }) => {
       try {
+        // Check if user already has a personal team if creating one
+        if (input.isPersonal) {
+          const existingPersonalTeam = await ctx.db.team.findFirst({
+            where: {
+              personalForId: ctx.session.user.id,
+            },
+          });
+
+          if (existingPersonalTeam) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "You already have a personal team",
+            });
+          }
+        }
+
         const team = await ctx.db.team.create({
           data: {
             name: input.name,
             admin: { connect: { id: ctx.session.user.id } },
+            ...(input.isPersonal && {
+              personalFor: { connect: { id: ctx.session.user.id } },
+            }),
             members: {
               create: {
                 user: { connect: { id: ctx.session.user.id } },
@@ -68,6 +88,7 @@ export const teamRouter = createTRPCRouter({
         where: {
           OR: [
             { adminId: ctx.session.user.id },
+            { personalForId: ctx.session.user.id },
             {
               members: {
                 some: { userId: ctx.session.user.id },
@@ -101,15 +122,132 @@ export const teamRouter = createTRPCRouter({
     }
   }),
 
+  getPersonalTeam: protectedProcedure.query(async ({ ctx }) => {
+    try {
+      const personalTeam = await ctx.db.team.findFirst({
+        where: {
+          personalForId: ctx.session.user.id,
+        },
+        include: {
+          members: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                },
+              },
+            },
+          },
+          personalFor: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+          correiosCredential: true,
+        },
+      });
+
+      if (!personalTeam) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Personal team not found",
+        });
+      }
+
+      return personalTeam;
+    } catch (error) {
+      if (error instanceof TRPCError) throw error;
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Failed to fetch personal team",
+        cause: error,
+      });
+    }
+  }),
+
+  getOwnedTeams: protectedProcedure.query(async ({ ctx }) => {
+    try {
+      const ownedTeams = await ctx.db.team.findMany({
+        where: {
+          adminId: ctx.session.user.id,
+          personalForId: null, // Exclude personal teams
+        },
+        include: {
+          members: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                },
+              },
+            },
+          },
+          correiosCredential: true,
+        },
+      });
+
+      return ownedTeams;
+    } catch (error) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Failed to fetch owned teams",
+        cause: error,
+      });
+    }
+  }),
+
+  getMemberships: protectedProcedure.query(async ({ ctx }) => {
+    try {
+      const memberships = await ctx.db.team.findMany({
+        where: {
+          members: {
+            some: { userId: ctx.session.user.id },
+          },
+          adminId: { not: ctx.session.user.id }, // Exclude teams where user is admin
+          personalForId: null, // Exclude personal teams
+        },
+        include: {
+          members: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                },
+              },
+            },
+          },
+          correiosCredential: true,
+        },
+      });
+
+      return memberships;
+    } catch (error) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Failed to fetch team memberships",
+        cause: error,
+      });
+    }
+  }),
+
   generateInviteLink: protectedProcedure
     .input(inviteLinkSchema)
     .mutation(async ({ ctx, input }) => {
       try {
-        // Check if user is admin
+        // Check if user is admin and team is not a personal team
         const team = await ctx.db.team.findFirst({
           where: {
             id: input.teamId,
             adminId: ctx.session.user.id,
+            personalForId: null, // Cannot generate invites for personal teams
           },
         });
 
@@ -120,14 +258,10 @@ export const teamRouter = createTRPCRouter({
           });
         }
 
-        // Generate a secure random token
         const token = randomBytes(32).toString("hex");
-
-        // Calculate expiry time
         const expiresAt = new Date();
         expiresAt.setHours(expiresAt.getHours() + INVITE_EXPIRY_HOURS);
 
-        // Store the invite in the database
         const invite = await ctx.db.teamInvite.create({
           data: {
             token,
@@ -155,16 +289,15 @@ export const teamRouter = createTRPCRouter({
     .input(joinTeamSchema)
     .mutation(async ({ ctx, input }) => {
       try {
-        // Find and validate the invite
         const invite = await ctx.db.teamInvite.findUnique({
           where: { token: input.token },
           include: { team: true },
         });
 
-        if (!invite) {
+        if (!invite || !invite.team || invite.team.personalForId) {
           throw new TRPCError({
             code: "NOT_FOUND",
-            message: "Invalid invite link",
+            message: "Invalid invite link or cannot join personal team",
           });
         }
 
@@ -182,7 +315,6 @@ export const teamRouter = createTRPCRouter({
           });
         }
 
-        // Check if user is already a member
         const existingMembership = await ctx.db.teamMember.findFirst({
           where: {
             teamId: invite.teamId,
@@ -197,7 +329,6 @@ export const teamRouter = createTRPCRouter({
           });
         }
 
-        // Add user to team and mark invite as used
         await ctx.db.$transaction([
           ctx.db.teamMember.create({
             data: {
@@ -238,6 +369,7 @@ export const teamRouter = createTRPCRouter({
           where: {
             id: input.teamId,
             adminId: ctx.session.user.id,
+            personalForId: null, // Cannot remove members from personal teams
           },
         });
 
@@ -281,6 +413,7 @@ export const teamRouter = createTRPCRouter({
         const team = await ctx.db.team.findFirst({
           where: {
             id: input.teamId,
+            personalForId: null, // Cannot exit personal teams
             members: {
               some: {
                 userId: ctx.session.user.id,
@@ -339,7 +472,15 @@ export const teamRouter = createTRPCRouter({
           });
         }
 
-        // Delete the team and all related records
+        console.log("DELETE TEAM", team);
+
+        if (!!team.personalForId) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Cannot delete personal team",
+          });
+        }
+
         await ctx.db.team.delete({
           where: {
             id: input.teamId,

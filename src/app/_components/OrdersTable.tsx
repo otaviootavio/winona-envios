@@ -20,6 +20,7 @@ interface OrdersTableProps {
   onSort: (field: "orderNumber" | "updatedAt") => void;
   sortBy: "orderNumber" | "updatedAt";
   sortOrder: "asc" | "desc";
+  selectedTeamId: string;
 }
 
 export function OrdersTable({
@@ -28,6 +29,7 @@ export function OrdersTable({
   onSort,
   sortBy,
   sortOrder,
+  selectedTeamId,
 }: OrdersTableProps) {
   const utils = api.useUtils();
   const { toast } = useToast();
@@ -129,7 +131,7 @@ export function OrdersTable({
       <div className="flex items-center justify-between p-4">
         <h2 className="text-lg font-semibold">Orders List</h2>
         <Button
-          onClick={() => batchUpdateAll.mutate()}
+          onClick={() => batchUpdateAll.mutate({ teamId: selectedTeamId })}
           disabled={isUpdatingAll || orders.length === 0}
         >
           {isUpdatingAll ? (
@@ -202,6 +204,7 @@ export function OrdersTable({
                         updateTracking.mutate({
                           orderId: order.id,
                           trackingCode: order.trackingCode!,
+                          teamId: selectedTeamId,
                         });
                       }}
                       disabled={updatingOrders.has(order.id)}

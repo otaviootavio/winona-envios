@@ -1,6 +1,7 @@
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { type DefaultSession, type NextAuthConfig } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
+import { type AdapterUser } from "@auth/core/adapters";
 
 import { db } from "~/server/db";
 
@@ -43,17 +44,40 @@ export const authConfig = {
         },
       },
     }),
-    /**
-     * ...add more providers here.
-     *
-     * Most other providers require a bit more work than the Discord provider. For example, the
-     * GitHub provider requires you to add the `refresh_token_expires_in` field to the Account
-     * model. Refer to the NextAuth.js docs for the provider you want to use. Example:
-     *
-     * @see https://next-auth.js.org/providers/github
-     */
   ],
-  adapter: PrismaAdapter(db),
+  adapter: {
+    ...PrismaAdapter(db),
+    createUser: async (data) => {
+      const result = await db.$transaction(async (tx) => {
+        // Create user with required email field
+        const user = await tx.user.create({
+          data: {
+            ...data,
+            email: data.email ?? "",
+          },
+        });
+
+        // Create personal team
+        await tx.team.create({
+          data: {
+            name: `${user.name ?? "User"}'s Personal Team`,
+            adminId: user.id,
+            personalForId: user.id,
+          },
+        });
+
+        return user;
+      });
+
+      return {
+        id: result.id,
+        email: result.email ?? "",
+        emailVerified: result.emailVerified,
+        name: result.name,
+        image: result.image,
+      } satisfies AdapterUser;
+    },
+  },
   callbacks: {
     session: ({ session, user }) => ({
       ...session,
