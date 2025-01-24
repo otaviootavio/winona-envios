@@ -76,7 +76,6 @@ const PersonalTeamCard = () => {
                 </p>
                 <CredentialsDialog
                   teamId={team.id}
-                  existingCredentials={null}
                 />
               </AlertDescription>
             </Alert>
@@ -102,7 +101,6 @@ const PersonalTeamCard = () => {
                 <div className="mt-4">
                   <CredentialsDialog
                     teamId={team.id}
-                    existingCredentials={team.correiosCredential}
                   />
                 </div>
               </AlertDescription>

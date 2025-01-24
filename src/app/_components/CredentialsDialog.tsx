@@ -33,6 +33,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Settings, Trash2, Loader2 } from "lucide-react";
 import { api } from "~/trpc/react";
+import { Eye, EyeOff } from "lucide-react";
+import { toast } from "~/hooks/use-toast";
 
 // Define the credential schema
 const credentialsSchema = z.object({
@@ -47,44 +49,44 @@ const credentialsSchema = z.object({
 // Infer the type from the schema
 type CredentialsFormData = z.infer<typeof credentialsSchema>;
 
-// Define the type for existing credentials
-type CorreiosCredential = {
-  id: string;
-  identifier: string;
-  accessCode: string;
-  contract: string;
-  teamId: string;
-  createdById: string;
-  createdAt: Date;
-  updatedAt: Date;
-};
-
 // Define the component props
 interface CredentialsDialogProps {
   /** The ID of the team these credentials belong to */
   teamId: string;
-  /** Existing credentials if any */
-  existingCredentials: CorreiosCredential | null;
   /** Optional callback for when credentials are changed */
   onCredentialsChange?: () => void;
 }
 
 const CredentialsDialog: React.FC<CredentialsDialogProps> = ({
   teamId,
-  existingCredentials,
   onCredentialsChange,
 }) => {
   const [open, setOpen] = React.useState(false);
+  const [showAccessCode, setShowAccessCode] = React.useState(false);
   const utils = api.useContext();
+
+  const { data: teamCredentials } = api.correios.getCredentials.useQuery({
+    teamId,
+  });
 
   const form = useForm<CredentialsFormData>({
     resolver: zodResolver(credentialsSchema),
     defaultValues: {
-      identifier: existingCredentials?.identifier ?? "",
-      accessCode: existingCredentials?.accessCode ?? "",
-      contract: existingCredentials?.contract ?? "",
+      identifier: teamCredentials?.identifier ?? "",
+      accessCode: teamCredentials?.accessCode ?? "",
+      contract: teamCredentials?.contract ?? "",
     },
   });
+
+  React.useEffect(() => {
+    if (teamCredentials) {
+      form.reset({
+        identifier: teamCredentials.identifier,
+        accessCode: teamCredentials.accessCode,
+        contract: teamCredentials.contract,
+      });
+    }
+  }, [teamCredentials, form]);
 
   const saveCredentialsMutation = api.correios.saveTeamCredentials.useMutation({
     onSuccess: async () => {
@@ -104,14 +106,27 @@ const CredentialsDialog: React.FC<CredentialsDialogProps> = ({
   });
 
   const onSubmit = async (data: CredentialsFormData) => {
-    await saveCredentialsMutation.mutateAsync({
-      teamId,
-      ...data,
-    });
+    try {
+      await saveCredentialsMutation.mutateAsync({
+        teamId,
+        ...data,
+      });
+      toast({
+        title: "Credentials saved",
+        description: "Your Correios credentials have been saved.",
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        form.setError("root", {
+          type: "custom",
+          message: error.message,
+        });
+      }
+    }
   };
 
   const onDelete = async () => {
-    if (!existingCredentials) return;
+    if (!teamCredentials) return;
     await deleteCredentialsMutation.mutateAsync({ teamId });
   };
 
@@ -119,18 +134,18 @@ const CredentialsDialog: React.FC<CredentialsDialogProps> = ({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button
-          variant={existingCredentials ? "outline" : "default"}
+          variant={teamCredentials ? "outline" : "default"}
           className="gap-2"
         >
           <Settings className="h-4 w-4" />
-          {existingCredentials ? "Manage Credentials" : "Configure Credentials"}
+          {teamCredentials ? "Manage Credentials" : "Configure Credentials"}
         </Button>
       </DialogTrigger>
 
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>
-            {existingCredentials
+            {teamCredentials
               ? "Manage Correios Credentials"
               : "Add Correios Credentials"}
           </DialogTitle>
@@ -163,13 +178,27 @@ const CredentialsDialog: React.FC<CredentialsDialogProps> = ({
               name="accessCode"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Access Code</FormLabel>
+                  <FormLabel>Access Code (API Key)</FormLabel>
                   <FormControl>
-                    <Input
-                      {...field}
-                      type="password"
-                      placeholder="Enter your access code"
-                    />
+                    <div className="relative">
+                      <Input
+                        {...field}
+                        type={showAccessCode ? "text" : "password"}
+                        placeholder="Enter your access code"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        onClick={() => setShowAccessCode(!showAccessCode)}
+                      >
+                        {showAccessCode ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -194,7 +223,7 @@ const CredentialsDialog: React.FC<CredentialsDialogProps> = ({
             />
 
             <div className="flex justify-between pt-4">
-              {existingCredentials && (
+              {teamCredentials && (
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button
@@ -229,6 +258,11 @@ const CredentialsDialog: React.FC<CredentialsDialogProps> = ({
               )}
 
               <div className="ml-auto flex gap-2">
+                {form.formState.errors.root && (
+                  <div className="text-sm font-medium text-destructive">
+                    {form.formState.errors.root.message}
+                  </div>
+                )}
                 <Button
                   type="button"
                   variant="outline"

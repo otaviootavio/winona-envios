@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
 import { TRPCError } from "@trpc/server";
-import { CorreiosAuthRepository } from "~/app/api/repositories/CorreiosAuthRepository";
+import { testCorreiosCredentials } from "../utils/testCorreiosCredentials";
 
 export const correiosRouter = createTRPCRouter({
   saveCredentials: protectedProcedure
@@ -34,20 +34,22 @@ export const correiosRouter = createTRPCRouter({
           });
         }
 
-        // Validate credentials first
-        const authRepo = new CorreiosAuthRepository();
-        await authRepo.authenticateWithContract(
-          {
-            identifier: input.identifier,
-            accessCode: input.accessCode,
-          },
-          {
-            numero: input.contract,
+        const testResult = await testCorreiosCredentials({
+          identifier: input.identifier,
+          accessCode: input.accessCode,
+          contract: {
+            number: input.contract,
             dr: input.regionalNumber,
           },
-        );
+        });
 
-        // Only save if validation was successful
+        if (!testResult.success) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: testResult.error ?? "Failed to validate credentials",
+          });
+        }
+
         const credentials = await ctx.db.correiosCredential.upsert({
           where: {
             teamId: input.teamId,
@@ -110,6 +112,19 @@ export const correiosRouter = createTRPCRouter({
         });
       }
 
+      const testResult = await testCorreiosCredentials({
+        identifier: credentials.identifier,
+        accessCode: credentials.accessCode,
+        contract: { number: credentials.contract },
+      });
+
+      if (!testResult.success) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: testResult.error ?? "Failed to validate credentials",
+        });
+      }
+
       // Handle both createdBy and updatedBy relations
       const result = await ctx.db.correiosCredential.upsert({
         where: {
@@ -134,18 +149,16 @@ export const correiosRouter = createTRPCRouter({
     .input(z.object({ teamId: z.string() }))
     .query(async ({ ctx, input }) => {
       try {
-        // Check team membership
-        const member = await ctx.db.teamMember.findFirst({
+        const team = await ctx.db.team.findFirst({
           where: {
-            teamId: input.teamId,
-            userId: ctx.session.user.id,
+            id: input.teamId,
           },
         });
 
-        if (!member) {
+        if (team?.adminId !== ctx.session.user.id) {
           throw new TRPCError({
             code: "FORBIDDEN",
-            message: "Não é membro do time",
+            message: "Não é administrador do time",
           });
         }
 

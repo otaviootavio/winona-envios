@@ -23,13 +23,13 @@ import PersonalTeamCard from "./PersonalTeamCard";
 import { type Team } from "@prisma/client";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import CredentialsDialog from "../CredentialsDialog";
+import CredentialStatus from "./TeamMemberCredentialCard";
 
 interface TeamCardProps {
   team: Team & {
     correiosCredential: {
       id: string;
       identifier: string;
-      accessCode: string;
       contract: string;
       teamId: string;
       createdById: string;
@@ -43,6 +43,7 @@ interface TeamCardProps {
 
 const TeamCard = ({ team, userId, onDeleteTeam }: TeamCardProps) => {
   const isTeamAdmin = team.adminId === userId;
+  const hasCredentials = !!team.correiosCredential;
 
   return (
     <Card key={team.id} className="w-full">
@@ -54,11 +55,14 @@ const TeamCard = ({ team, userId, onDeleteTeam }: TeamCardProps) => {
               {isTeamAdmin ? "Team Administration" : "Team Membership"}
             </CardDescription>
           </div>
-          {isTeamAdmin && (
-            <Button variant="destructive" onClick={() => onDeleteTeam(team.id)}>
-              Delete Team
-            </Button>
-          )}
+          <div className="flex justify-end items-center gap-2">
+            {isTeamAdmin && (
+              <Button variant="destructive" onClick={() => onDeleteTeam(team.id)}>
+                Delete Team
+              </Button>
+            )}
+            <CredentialStatus hasCredentials={hasCredentials}/>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -93,7 +97,6 @@ const TeamCard = ({ team, userId, onDeleteTeam }: TeamCardProps) => {
                       <div className="mt-4">
                         <CredentialsDialog
                           teamId={team.id}
-                          existingCredentials={team.correiosCredential}
                         />
                       </div>
                     </>
@@ -105,7 +108,6 @@ const TeamCard = ({ team, userId, onDeleteTeam }: TeamCardProps) => {
                       </p>
                       <CredentialsDialog
                         teamId={team.id}
-                        existingCredentials={null}
                       />
                     </>
                   )}

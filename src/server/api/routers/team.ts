@@ -224,7 +224,19 @@ export const teamRouter = createTRPCRouter({
               },
             },
           },
-          correiosCredential: true,
+          correiosCredential: 
+          {
+            select: {
+              id: true,
+              identifier: true,
+              accessCode: false,
+              contract: true,
+              teamId: true,
+              createdById: true,
+              createdAt: true,
+              updatedAt: true,
+            },
+          },
         },
       });
 
