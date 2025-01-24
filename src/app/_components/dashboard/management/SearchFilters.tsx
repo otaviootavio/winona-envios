@@ -1,13 +1,13 @@
 import { OrderStatus } from "@prisma/client";
+import { Search } from "lucide-react";
+import { Input } from "~/components/ui/input";
 import {
   Select,
   SelectContent,
+  SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@radix-ui/react-select";
-import { Search } from "lucide-react";
-import { Input } from "~/components/ui/input";
-import { SelectItem } from "~/components/ui/select";
+} from "~/components/ui/select";
 
 interface SearchFilterProps {
   searchTerm: string;
