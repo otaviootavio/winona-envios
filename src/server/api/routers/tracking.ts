@@ -16,6 +16,7 @@ const trackingCodeSchema = z.object({
 const updateTrackingSchema = z.object({
   orderId: z.string(),
   trackingCode: z.string().trim().min(1),
+  teamId: z.string(),
 });
 
 // Helper function to determine order status
@@ -38,26 +39,48 @@ const authRepo = new CorreiosAuthRepository();
 // Helper function to get authenticated Correios repository
 const getCorreiosRepository = async (
   ctx: Context,
+  teamId?: string,
 ): Promise<CorreiosRepository> => {
-  const credentials = await ctx.db.correiosCredential.findUnique({
-    where: { userId: ctx.session?.user.id },
-  });
+  // Get the team - either specified team or personal team
+  const team = teamId
+    ? await ctx.db.team.findFirst({
+        where: {
+          id: teamId,
+          OR: [
+            { adminId: ctx.session?.user.id },
+            { members: { some: { userId: ctx.session?.user.id } } },
+          ],
+        },
+        include: {
+          correiosCredential: true,
+        },
+      })
+    : await ctx.db.team.findFirst({
+        where: {
+          personalForId: ctx.session?.user.id,
+        },
+        include: {
+          correiosCredential: true,
+        },
+      });
 
-  if (!credentials) {
+  if (!team?.correiosCredential) {
     throw new TRPCError({
       code: "UNAUTHORIZED",
-      message: "Correios credentials not found",
+      message: teamId
+        ? "You don't have access to this team's Correios credentials"
+        : "Correios credentials not found",
     });
   }
 
   try {
     const tokenResponse = await authRepo.authenticateWithContract(
       {
-        identifier: credentials.identifier,
-        accessCode: credentials.accessCode,
+        identifier: team.correiosCredential.identifier,
+        accessCode: team.correiosCredential.accessCode,
       },
       {
-        numero: credentials.contract,
+        numero: team.correiosCredential.contract,
         dr: undefined,
       },
     );
@@ -164,7 +187,7 @@ export const trackingRouter = createTRPCRouter({
       }
 
       try {
-        const correiosRepo = await getCorreiosRepository(ctx);
+        const correiosRepo = await getCorreiosRepository(ctx, input.teamId);
         const result = await processTrackingInfo(
           correiosRepo,
           input.trackingCode,
@@ -216,9 +239,14 @@ export const trackingRouter = createTRPCRouter({
     }),
 
   batchUpdateTracking: protectedProcedure
-    .input(z.object({ orderIds: z.array(z.string()) }))
+    .input(
+      z.object({
+        orderIds: z.array(z.string()),
+        teamId: z.string(),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
-      const correiosRepo = await getCorreiosRepository(ctx);
+      const correiosRepo = await getCorreiosRepository(ctx, input.teamId);
 
       const orders = await ctx.db.order.findMany({
         where: {
@@ -266,101 +294,107 @@ export const trackingRouter = createTRPCRouter({
       };
     }),
 
-  batchUpdateAllOrders: protectedProcedure.mutation(async ({ ctx }) => {
-    try {
-      // First, find the latest order import for the user
-      const latestImport = await ctx.db.orderImport.findFirst({
-        where: {
-          userId: ctx.session.user.id,
-        },
-        orderBy: {
-          createdAt: "desc",
-        },
-      });
-
-      if (!latestImport) {
-        return {
-          totalProcessed: 0,
-          successfulUpdates: 0,
-          message: "No order imports found",
-        };
-      }
-
-      // Get all orders from the latest import that have tracking codes
-      const orders = await ctx.db.order.findMany({
-        where: {
-          trackingCode: { not: null },
-          orderImportId: latestImport.id,
-          orderImport: {
+  batchUpdateAllOrders: protectedProcedure
+    .input(
+      z.object({
+        teamId: z.string(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        // First, find the latest order import for the user
+        const latestImport = await ctx.db.orderImport.findFirst({
+          where: {
             userId: ctx.session.user.id,
           },
-        },
-      });
+          orderBy: {
+            createdAt: "desc",
+          },
+        });
 
-      const batchSize = 50;
-      const batches = [];
-
-      for (let i = 0; i < orders.length; i += batchSize) {
-        batches.push(orders.slice(i, i + batchSize));
-      }
-
-      let successCount = 0;
-
-      for (const batch of batches) {
-        // Refresh token for each batch to ensure it's valid
-        const currentRepo = await getCorreiosRepository(ctx);
-
-        const updates = await Promise.allSettled(
-          batch.map(async (order) => {
-            if (!order.trackingCode) return null;
-
-            try {
-              const result = await processTrackingInfo(
-                currentRepo,
-                order.trackingCode,
-              );
-
-              return ctx.db.order.update({
-                where: { id: order.id },
-                data: {
-                  shippingStatus: result.status,
-                },
-              });
-            } catch (error) {
-              console.error(
-                `Failed to update tracking for order ${order.id}:`,
-                error,
-              );
-              return null;
-            }
-          }),
-        );
-
-        successCount += updates.filter(
-          (result) => result.status === "fulfilled" && result.value !== null,
-        ).length;
-
-        // Add delay between batches to respect rate limits
-        if (batches.length > 1) {
-          await new Promise((resolve) => setTimeout(resolve, 1000));
+        if (!latestImport) {
+          return {
+            totalProcessed: 0,
+            successfulUpdates: 0,
+            message: "No order imports found",
+          };
         }
-      }
 
-      return {
-        totalProcessed: orders.length,
-        successfulUpdates: successCount,
-        importId: latestImport.id,
-        importDate: latestImport.createdAt,
-      };
-    } catch (error) {
-      if (error instanceof TRPCError && error.code === "UNAUTHORIZED") {
-        throw error;
+        // Get all orders from the latest import that have tracking codes
+        const orders = await ctx.db.order.findMany({
+          where: {
+            trackingCode: { not: null },
+            orderImportId: latestImport.id,
+            orderImport: {
+              userId: ctx.session.user.id,
+            },
+          },
+        });
+
+        const batchSize = 50;
+        const batches = [];
+
+        for (let i = 0; i < orders.length; i += batchSize) {
+          batches.push(orders.slice(i, i + batchSize));
+        }
+
+        let successCount = 0;
+
+        for (const batch of batches) {
+          // Refresh token for each batch to ensure it's valid
+          const currentRepo = await getCorreiosRepository(ctx, input.teamId);
+
+          const updates = await Promise.allSettled(
+            batch.map(async (order) => {
+              if (!order.trackingCode) return null;
+
+              try {
+                const result = await processTrackingInfo(
+                  currentRepo,
+                  order.trackingCode,
+                );
+
+                return ctx.db.order.update({
+                  where: { id: order.id },
+                  data: {
+                    shippingStatus: result.status,
+                  },
+                });
+              } catch (error) {
+                console.error(
+                  `Failed to update tracking for order ${order.id}:`,
+                  error,
+                );
+                return null;
+              }
+            }),
+          );
+
+          successCount += updates.filter(
+            (result) => result.status === "fulfilled" && result.value !== null,
+          ).length;
+
+          // Add delay between batches to respect rate limits
+          if (batches.length > 1) {
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+          }
+        }
+
+        return {
+          totalProcessed: orders.length,
+          successfulUpdates: successCount,
+          importId: latestImport.id,
+          importDate: latestImport.createdAt,
+        };
+      } catch (error) {
+        if (error instanceof TRPCError && error.code === "UNAUTHORIZED") {
+          throw error;
+        }
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to update orders",
+          cause: error,
+        });
       }
-      throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: "Failed to update orders",
-        cause: error,
-      });
-    }
-  }),
+    }),
 });

@@ -3,6 +3,7 @@ import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 import { orderRouter } from "~/server/api/routers/order";
 import { trackingRouter } from "~/server/api/routers/tracking";
 import { correiosRouter } from "./routers/correios";
+import { teamRouter } from "./routers/team";
 
 /**
  * This is the primary router for your server.
@@ -13,7 +14,8 @@ export const appRouter = createTRPCRouter({
   post: postRouter,
   order: orderRouter,
   tracking: trackingRouter,
-  correios: correiosRouter
+  correios: correiosRouter,
+  team: teamRouter
 });
 
 // export type definition of API

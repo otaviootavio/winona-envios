@@ -55,17 +55,22 @@ model Session {
 }
 
 model User {
-    id            String    @id @default(cuid())
-    name          String?
-    email         String?   @unique
-    emailVerified DateTime?
-    image         String?
-    accounts      Account[]
-    sessions      Session[]
-    posts         Post[]
-    orderImports  OrderImport[]
-    correiosCredential CorreiosCredential?
+    id                   String               @id @default(cuid())
+    name                 String?
+    email                String?              @unique
+    emailVerified        DateTime?
+    image                String?
+    accounts             Account[]
+    sessions             Session[]
+    posts                Post[]
+    orderImports         OrderImport[]
+    personalTeam         Team?                @relation("PersonalTeam")
+    ownedTeams           Team[]               @relation("TeamAdmin")
+    teamMemberships      TeamMember[]
+    createdCredentials   CorreiosCredential[] @relation("CorreiosCredentialToUser")
+    updatedCredentials   CorreiosCredential[] @relation("CorreiosCredentialUpdatedByUser")
 }
+
 
 model VerificationToken {
     identifier String
@@ -121,16 +126,68 @@ enum OrderStatus {
 }
 
 model CorreiosCredential {
-    id            String   @id @default(cuid())
-    identifier    String   // CNPJ or CPF
-    accessCode    String   // Encrypted access code
-    contract      String   // Contract number
-    createdAt     DateTime @default(now())
-    updatedAt     DateTime @updatedAt
-    
-    // Relationship with User
-    user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-    userId        String   @unique // One-to-one relationship with User
+    id         String   @id @default(cuid())
+    identifier String // CNPJ or CPF
+    accessCode String // Encrypted access code
+    contract   String // Contract number
+    createdAt  DateTime @default(now())
+    updatedAt  DateTime @updatedAt
+
+    createdBy   User   @relation("CorreiosCredentialToUser", fields: [createdById], references: [id])
+    createdById String
+    updatedBy   User   @relation("CorreiosCredentialUpdatedByUser", fields: [updatedById], references: [id])
+    updatedById String
+        team        Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+    teamId      String @unique
 
     @@index([identifier])
 }
+
+
+model Team {
+    id        String   @id @default(cuid())
+    name      String
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    admin   User   @relation("TeamAdmin", fields: [adminId], references: [id])
+    adminId String
+
+    personalFor   User?   @relation("PersonalTeam", fields: [personalForId], references: [id])
+    personalForId String? @unique
+
+    members TeamMember[]
+
+    correiosCredential CorreiosCredential?
+    TeamInvite        TeamInvite[]
+
+    @@index([adminId])
+}
+
+model TeamMember {
+    id        String   @id @default(cuid())
+    createdAt DateTime @default(now())
+    
+    team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+    teamId    String
+    
+    user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    userId    String
+
+    @@unique([teamId, userId])
+    @@index([userId])
+}
+
+model TeamInvite {
+    id          String   @id @default(cuid())
+    token       String   @unique
+    teamId      String
+    team        Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+    createdAt   DateTime @default(now())
+    expiresAt   DateTime
+    usedAt      DateTime?
+    
+    @@index([token])
+    @@index([teamId])
+}
+
