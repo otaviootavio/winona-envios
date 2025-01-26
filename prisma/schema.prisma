@@ -67,6 +67,8 @@ model User {
     personalTeam         Team?                @relation("PersonalTeam")
     ownedTeams           Team[]               @relation("TeamAdmin")
     teamMemberships      TeamMember[]
+    selectedTeam   Team?  @relation("SelectedTeam", fields: [selectedTeamid], references: [id], onDelete: SetNull)
+    selectedTeamid String?
     createdCredentials   CorreiosCredential[] @relation("CorreiosCredentialToUser")
     updatedCredentials   CorreiosCredential[] @relation("CorreiosCredentialUpdatedByUser")
 }
@@ -162,6 +164,7 @@ model Team {
     TeamInvite        TeamInvite[]
 
     @@index([adminId])
+    selectedByUsers User[] @relation("SelectedTeam")
 }
 
 model TeamMember {

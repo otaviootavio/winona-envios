@@ -15,23 +15,52 @@ import {
   CardTitle,
 } from "~/components/ui/card";
 import { Users } from "lucide-react";
-import type { Team } from "@prisma/client";
+import { api } from "~/trpc/react";
+import { useEffect } from "react";
+import { useToast } from "~/hooks/use-toast";
 
-interface TeamWithCredential extends Team {
-  correiosCredential: { id: string } | null;
-}
+export function TeamSelector() {
+  const { toast } = useToast();
+  const utils = api.useUtils();
 
-interface TeamSelectorProps {
-  teams: TeamWithCredential[];
-  selectedTeamId?: string;
-  onSelectTeam: (teamId: string) => void;
-}
+  // Fetch teams and selected team data
+  const { data: teams = [], isLoading: isLoadingTeams } =
+    api.team.getMyTeams.useQuery();
+  const { data: selectedTeam, isLoading: isLoadingSelected } =
+    api.team.getSelectedTeam.useQuery();
 
-export function TeamSelector({
-  teams,
-  selectedTeamId,
-  onSelectTeam,
-}: TeamSelectorProps) {
+  // Update selected team mutation
+  const { mutate: updateTeam, isPending: isUpdating } =
+    api.team.updateSelectedTeam.useMutation({
+      onSuccess: async () => {
+        await Promise.all([
+          utils.team.getSelectedTeam.invalidate(),
+          utils.team.getMyTeams.invalidate(),
+        ]);
+      },
+      onError: (error) => {
+        toast({
+          title: "Update failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      },
+    });
+
+  if (isLoadingTeams || isLoadingSelected) {
+    return (
+      <Card>
+        <CardHeader className="flex flex-row items-center space-x-4">
+          <Users className="h-6 w-6" />
+          <div>
+            <CardTitle>Loading Teams...</CardTitle>
+            <CardDescription>Fetching your team information</CardDescription>
+          </div>
+        </CardHeader>
+      </Card>
+    );
+  }
+
   if (!teams.length) return null;
 
   return (
@@ -39,17 +68,24 @@ export function TeamSelector({
       <CardHeader className="flex flex-row items-center space-x-4">
         <Users className="h-6 w-6" />
         <div>
-          <CardTitle>Select Team</CardTitle>
+          <CardTitle>Active Team</CardTitle>
           <CardDescription>
-            Choose which team&apos;s credentials you want to use
+            Current team's credentials will be used for operations
           </CardDescription>
         </div>
       </CardHeader>
       <CardContent>
-        <Select value={selectedTeamId} onValueChange={onSelectTeam}>
+        <Select
+          value={selectedTeam?.id ?? ""}
+          onValueChange={(teamId) => updateTeam({ teamId })}
+          disabled={isUpdating}
+        >
           <SelectTrigger className="w-[280px]">
-            <SelectValue placeholder="Select a team" />
+            <SelectValue placeholder="Select a team">
+              {selectedTeam ? selectedTeam.name : "Choose a team"}
+            </SelectValue>
           </SelectTrigger>
+
           <SelectContent>
             {teams.map((team) => (
               <SelectItem key={team.id} value={team.id}>

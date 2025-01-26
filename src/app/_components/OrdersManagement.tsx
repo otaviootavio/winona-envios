@@ -15,11 +15,10 @@ import { NoCredentialsView } from "./dashboard/management/NoCredentialsView";
 import { TrackingOverview } from "./dashboard/management/TrackingOverview";
 import { StatusDistribution } from "./dashboard/management/StatusDistribution";
 import { SearchFilters } from "./dashboard/management/SearchFilters";
-import { TeamSelector } from "./dashboard/management/TeamSelector"; // New component
+import { TeamSelector } from "./dashboard/management/TeamSelector";
 
 const ITEMS_PER_PAGE = 10;
 
-// Types
 interface ImportInfo {
   totalOrders: number;
   fileName: string;
@@ -31,7 +30,6 @@ export function OrdersManagement() {
   const utils = api.useUtils();
 
   // State
-  const [selectedTeamId, setSelectedTeamId] = useState<string>("");
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<OrderStatus | undefined>();
@@ -40,15 +38,20 @@ export function OrdersManagement() {
   );
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
-  // Fetch teams data
+  // Fetch team data
   const { data: teams, isLoading: isLoadingTeams } =
     api.team.getMyTeams.useQuery();
+  const { data: selectedTeam, isLoading: isLoadingSelected } =
+    api.team.getSelectedTeam.useQuery();
 
-  // Find selected team's credentials
-  const selectedTeam = teams?.find((team) => team.id === selectedTeamId);
+  // Derived state
   const hasCredentials = !!selectedTeam?.correiosCredential;
+  const selectedTeamId = selectedTeam?.id;
 
-  // Data fetching - orders are still linked to user, not team
+  // Data fetching
+  // In OrdersManagement.tsx
+
+  // Update the data fetching calls to match original procedure definitions
   const importSummary = api.order.getImportsSummary.useQuery(undefined, {
     enabled: !!selectedTeamId && hasCredentials,
   });
@@ -75,7 +78,7 @@ export function OrdersManagement() {
     { enabled: !!latestImportId },
   );
 
-  // Chart data preparation
+  // Chart data
   const chartData =
     orderStats?.statusBreakdown.map((stat) => ({
       name: stat.shippingStatus,
@@ -100,12 +103,6 @@ export function OrdersManagement() {
     },
   });
 
-  // Handlers
-  const handleTeamChange = (teamId: string) => {
-    setSelectedTeamId(teamId);
-    setPage(1);
-  };
-
   const handleSort = (field: SortableFieldValue) => {
     if (field === sortBy) {
       setSortOrder((current) => (current === "asc" ? "desc" : "asc"));
@@ -117,7 +114,18 @@ export function OrdersManagement() {
   };
 
   // Loading states
-  if (isLoadingTeams) return null;
+  if (isLoadingTeams || isLoadingSelected) {
+    return (
+      <div className="flex h-[50vh] items-center justify-center">
+        <Alert>
+          <AlertTitle>Loading Team Information</AlertTitle>
+          <AlertDescription>
+            Please wait while we load your team settings
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
 
   // Error states
   if (!teams || teams.length === 0) {
@@ -139,14 +147,23 @@ export function OrdersManagement() {
     );
   }
 
-  // Team selection required first
-  if (!selectedTeamId) {
-    return <TeamSelector teams={teams} onSelectTeam={handleTeamChange} />;
+  // No credentials state
+  if (selectedTeam && !hasCredentials) {
+    return <NoCredentialsView />;
   }
 
-  // No credentials state
-  if (!hasCredentials) {
-    return <NoCredentialsView />;
+  if (!selectedTeam) {
+    return (
+      <div className="flex flex-col items-center gap-4 p-8">
+        <TeamSelector />
+        <Alert className="max-w-md">
+          <AlertTitle>No Team Selected</AlertTitle>
+          <AlertDescription>
+            Please select a team to view order management features
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
   }
 
   // No orders state
@@ -154,7 +171,7 @@ export function OrdersManagement() {
     return <NoOrdersView />;
   }
 
-  // Prepare data for dashboard
+  // Prepare dashboard data
   const latestImport = importSummary.data?.[0];
   const totalOrders = orderStats?.totalOrders ?? 0;
   const trackingCount = orderStats?.trackingCount ?? 0;
@@ -165,11 +182,7 @@ export function OrdersManagement() {
 
   return (
     <div className="w-full space-y-4">
-      <TeamSelector
-        teams={teams}
-        selectedTeamId={selectedTeamId}
-        onSelectTeam={handleTeamChange}
-      />
+      <TeamSelector />
 
       <FileUploadCard latestImport={importInfo} />
 
@@ -212,7 +225,7 @@ export function OrdersManagement() {
         onSort={handleSort}
         sortBy={sortBy}
         sortOrder={sortOrder}
-        selectedTeamId={selectedTeamId}
+        selectedTeamId={selectedTeamId ?? ""}
       />
 
       {orders.data && orders.data.orders.length > 0 && (
