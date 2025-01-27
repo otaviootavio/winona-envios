@@ -10,7 +10,7 @@ import {
 import { MembersTable } from "./MembersTable";
 import { SecurityAlert } from "./SecurityAlert";
 import { ExitTeamButton } from "./ExitTeamButton";
-import { RouterOutputs } from "~/trpc/react";
+import { type RouterOutputs } from "~/trpc/react";
 
 type MembershipTeam = RouterOutputs["team"]["getMemberships"][number];
 

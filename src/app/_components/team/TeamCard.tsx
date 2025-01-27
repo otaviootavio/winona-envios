@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "~/components/ui/button";
-import { api, RouterOutputs } from "~/trpc/react";
+import { api,type RouterOutputs } from "~/trpc/react";
 import { useToast } from "~/hooks/use-toast";
 import { Key } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
