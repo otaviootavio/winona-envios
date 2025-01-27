@@ -501,31 +501,10 @@ export const teamRouter = createTRPCRouter({
           selectedTeam: {
             include: {
               members: {
-                include: {
-                  user: {
-                    select: {
-                      id: true,
-                      name: true,
-                      email: true,
-                    },
-                  },
-                },
+                include: { user: { select: { id: true, name: true } } },
               },
-              correiosCredential: true,
-              personalFor: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true,
-                },
-              },
-              admin: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true,
-                },
-              },
+              correiosCredential: true, // Only include if absolutely needed
+              admin: { select: { id: true, name: true } }, // Lightweight
             },
           },
         },
