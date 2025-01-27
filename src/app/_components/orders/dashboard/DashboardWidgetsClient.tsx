@@ -18,14 +18,14 @@ export function DashboardWidgetsClient({
 }: DashboardWidgetsClientProps) {
   return (
     <div className="flex flex-row gap-2">
-      <div className="flex-1">
+      <div className="flex-1 flex-col">
         <TrackingOverview
           totalOrders={totalOrders}
           trackingCount={trackingCount}
           lastUpdateDate={lastUpdateDate}
         />
       </div>
-      <div className="flex-1">
+      <div className="flex-1 flex-col grow">
         <StatusDistribution chartData={chartData} totalOrders={totalOrders} />
       </div>
     </div>

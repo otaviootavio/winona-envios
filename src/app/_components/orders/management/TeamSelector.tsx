@@ -39,6 +39,7 @@ export function TeamSelector() {
           utils.team.getSelectedTeam.invalidate(),
           utils.team.getMyTeams.invalidate(),
         ]);
+        router.refresh();
       },
       onError: (error) => {
         toast({

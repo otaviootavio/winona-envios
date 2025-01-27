@@ -22,7 +22,7 @@ export const StatusDistribution = ({
     </CardHeader>
     <CardContent>
       <div className="flex flex-row justify-start gap-2">
-        {chartData.map((stat) => (
+        {chartData.sort((a, b) => b.value - a.value).map((stat) => (
           <div
             key={stat.name}
             className="flex-auto flex-col rounded-lg border p-2"

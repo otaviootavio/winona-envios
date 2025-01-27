@@ -8,8 +8,6 @@ import { FileUploadCard } from "./upload/FileUploadCard";
 import { SearchFilters } from "./management/SearchFilters";
 import { OrdersTableSection } from "./table/OrdersTableSection";
 
-const ITEMS_PER_PAGE = 10;
-
 type OrdersManagementClientProps = {
   children: React.ReactNode;
   initialTeamId: string;

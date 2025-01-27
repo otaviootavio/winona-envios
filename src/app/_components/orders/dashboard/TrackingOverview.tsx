@@ -18,7 +18,7 @@ export const TrackingOverview = ({
       <CardDescription>Current status of your orders</CardDescription>
     </CardHeader>
     <CardContent>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <div className="flex flex-row justify-start gap-2">
         <div className="rounded-lg border p-3">
           <p className="text-sm font-medium">Total number of orders</p>
           <p className="text-2xl font-bold">{totalOrders}</p>

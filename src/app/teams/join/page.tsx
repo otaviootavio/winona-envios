@@ -31,7 +31,7 @@ function JoinTeamContent() {
         title: "Success!",
         description: "You have successfully joined the team.",
       });
-      router.push("/teams/managed");
+      router.push("/teams/memberships");
     },
     onError: (error) => {
       setError(error.message);
