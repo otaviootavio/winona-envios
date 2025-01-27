@@ -17,7 +17,7 @@ const CredentialStatus = ({ hasCredentials }: CredentialStatusProps) => (
       ) : (
         <>
           <AlertCircle className="h-4 w-4" />
-          <p className="text-sm">Please configure the credentials</p>
+          <p className="text-sm">Please, configure the credentials</p>
         </>
       )}
     </Alert>

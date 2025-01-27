@@ -203,50 +203,34 @@ export const teamRouter = createTRPCRouter({
   }),
 
   getMemberships: protectedProcedure.query(async ({ ctx }) => {
-    try {
-      const memberships = await ctx.db.team.findMany({
-        where: {
-          members: {
-            some: { userId: ctx.session.user.id },
+    return ctx.db.team.findMany({
+      where: {
+        members: { some: { userId: ctx.session.user.id } },
+        adminId: { not: ctx.session.user.id },
+        personalForId: null,
+      },
+      include: {
+        correiosCredential: {
+          select: {
+            id: true,
+            identifier: true,
+            contract: true,
+            createdAt: true,
           },
-          adminId: { not: ctx.session.user.id }, // Exclude teams where user is admin
-          personalForId: null, // Exclude personal teams
         },
-        include: {
-          members: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true,
-                },
+        members: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
               },
             },
           },
-          correiosCredential: {
-            select: {
-              id: true,
-              identifier: true,
-              accessCode: false,
-              contract: true,
-              teamId: true,
-              createdById: true,
-              createdAt: true,
-              updatedAt: true,
-            },
-          },
         },
-      });
-
-      return memberships;
-    } catch (error) {
-      throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: "Failed to fetch team memberships",
-        cause: error,
-      });
-    }
+      },
+    });
   }),
 
   generateInviteLink: protectedProcedure

@@ -19,7 +19,7 @@ export async function Header() {
                 <Link href="/dashboard">Dashboard</Link>
               </Button>
               <Button asChild variant="ghost">
-                <Link href="/teams">Teams</Link>
+                <Link href="/teams/personal">Teams</Link>
               </Button>
               <Button asChild variant="outline">
                 <Link href="/api/auth/signout">Sign out</Link>

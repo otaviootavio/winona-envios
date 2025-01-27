@@ -31,7 +31,7 @@ function JoinTeamContent() {
         title: "Success!",
         description: "You have successfully joined the team.",
       });
-      router.push("/teams");
+      router.push("/teams/managed");
     },
     onError: (error) => {
       setError(error.message);
@@ -82,7 +82,7 @@ function JoinTeamContent() {
             <CardDescription>{error}</CardDescription>
           </CardHeader>
           <CardFooter className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => router.push("/teams")}>
+            <Button variant="outline" onClick={() => router.push("/teams/personal")}>
               Go to Teams
             </Button>
           </CardFooter>
@@ -106,7 +106,7 @@ function JoinTeamContent() {
           )}
         </CardContent>
         <CardFooter className="flex justify-end gap-2">
-          <Button variant="outline" onClick={() => router.push("/teams")}>
+          <Button variant="outline" onClick={() => router.push("/teams/personal")}>
             Cancel
           </Button>
           <Button

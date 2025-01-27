@@ -16,11 +16,13 @@ import {
 } from "~/components/ui/card";
 import { Users } from "lucide-react";
 import { api } from "~/trpc/react";
-import { useEffect } from "react";
 import { useToast } from "~/hooks/use-toast";
+import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
+import { useRouter } from "next/navigation";
 
 export function TeamSelector() {
   const { toast } = useToast();
+  const router = useRouter();
   const utils = api.useUtils();
 
   // Fetch teams and selected team data
@@ -70,11 +72,11 @@ export function TeamSelector() {
         <div>
           <CardTitle>Active Team</CardTitle>
           <CardDescription>
-            Current team's credentials will be used for operations
+            Current team&apos;s credentials will be used for operations
           </CardDescription>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex flex-col gap-4 justify-start">
         <Select
           value={selectedTeam?.id ?? ""}
           onValueChange={(teamId) => updateTeam({ teamId })}
@@ -101,6 +103,18 @@ export function TeamSelector() {
             ))}
           </SelectContent>
         </Select>
+          { !selectedTeam?.correiosCredential?.accessCode && <Alert variant="destructive">
+            <AlertTitle>Configure the Selected Team Credentials</AlertTitle>
+            <AlertDescription>
+              Add credentials to your selected team to enable order tracking.{" "}
+              <button
+                onClick={() => router.push(`/teams`)}
+                className="font-semibold hover:underline"
+              >
+                Configure credentials
+              </button>
+            </AlertDescription>
+          </Alert>}
       </CardContent>
     </Card>
   );

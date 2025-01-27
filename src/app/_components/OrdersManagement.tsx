@@ -11,11 +11,11 @@ import { type OrderStatus } from "@prisma/client";
 import { SortableFields, type SortableFieldValue } from "~/constants/order";
 import { useRouter } from "next/navigation";
 import { NoOrdersView } from "./dashboard/management/NoOrdersView";
-import { NoCredentialsView } from "./dashboard/management/NoCredentialsView";
 import { TrackingOverview } from "./dashboard/management/TrackingOverview";
 import { StatusDistribution } from "./dashboard/management/StatusDistribution";
 import { SearchFilters } from "./dashboard/management/SearchFilters";
 import { TeamSelector } from "./dashboard/management/TeamSelector";
+import { cn } from "~/lib/utils"; // Make sure you have this utility
 
 const ITEMS_PER_PAGE = 10;
 
@@ -38,7 +38,7 @@ export function OrdersManagement() {
   );
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
-  // Fetch team data
+  // Team data
   const { data: teams, isLoading: isLoadingTeams } =
     api.team.getMyTeams.useQuery();
   const { data: selectedTeam, isLoading: isLoadingSelected } =
@@ -47,11 +47,11 @@ export function OrdersManagement() {
   // Derived state
   const hasCredentials = !!selectedTeam?.correiosCredential;
   const selectedTeamId = selectedTeam?.id;
+  const needsTeamSelection = !selectedTeam;
+  const needsCredentials = selectedTeam && !hasCredentials;
+  const hasOnboardingCompleted = selectedTeam && hasCredentials;
 
-  // Data fetching
-  // In OrdersManagement.tsx
-
-  // Update the data fetching calls to match original procedure definitions
+  // Order data
   const importSummary = api.order.getImportsSummary.useQuery(undefined, {
     enabled: !!selectedTeamId && hasCredentials,
   });
@@ -113,7 +113,7 @@ export function OrdersManagement() {
     setPage(1);
   };
 
-  // Loading states
+  // Loading state
   if (isLoadingTeams || isLoadingSelected) {
     return (
       <div className="flex h-[50vh] items-center justify-center">
@@ -127,115 +127,91 @@ export function OrdersManagement() {
     );
   }
 
-  // Error states
-  if (!teams || teams.length === 0) {
-    return (
-      <div className="flex h-[50vh] items-center justify-center">
-        <Alert>
-          <AlertTitle>No Teams Available</AlertTitle>
-          <AlertDescription>
-            Please join or create a team to manage orders.
-            <button
-              onClick={() => router.push("/teams/create")}
-              className="ml-2 text-blue-600 hover:underline"
-            >
-              Create Team
-            </button>
-          </AlertDescription>
-        </Alert>
-      </div>
-    );
-  }
-
-  // No credentials state
-  if (selectedTeam && !hasCredentials) {
-    return <NoCredentialsView />;
-  }
-
-  if (!selectedTeam) {
-    return (
-      <div className="flex flex-col items-center gap-4 p-8">
-        <TeamSelector />
-        <Alert className="max-w-md">
-          <AlertTitle>No Team Selected</AlertTitle>
-          <AlertDescription>
-            Please select a team to view order management features
-          </AlertDescription>
-        </Alert>
-      </div>
-    );
-  }
-
-  // No orders state
-  if (!latestImportId) {
-    return <NoOrdersView />;
-  }
-
-  // Prepare dashboard data
-  const latestImport = importSummary.data?.[0];
-  const totalOrders = orderStats?.totalOrders ?? 0;
-  const trackingCount = orderStats?.trackingCount ?? 0;
-
-  const importInfo: ImportInfo | undefined = latestImport
-    ? { totalOrders, fileName: latestImport.fileName }
-    : undefined;
-
   return (
     <div className="w-full space-y-4">
+      {/* Team selection */}
       <TeamSelector />
 
-      <FileUploadCard latestImport={importInfo} />
-
-      {latestImport && (
-        <>
-          <div className="flex flex-row gap-2">
-            <div className="flex-1">
-              <TrackingOverview
-                totalOrders={totalOrders}
-                trackingCount={trackingCount}
-                lastUpdateDate={latestImport.createdAt}
-              />
-            </div>
-            <div className="flex-1">
-              <StatusDistribution
-                chartData={chartData}
-                totalOrders={totalOrders}
-              />
-            </div>
-          </div>
-        </>
-      )}
-
-      <SearchFilters
-        searchTerm={searchTerm}
-        onSearchChange={(value) => {
-          setSearchTerm(value);
-          setPage(1);
-        }}
-        statusFilter={statusFilter}
-        onStatusFilterChange={(value) => {
-          setStatusFilter(value);
-          setPage(1);
-        }}
-      />
-
-      <OrdersTable
-        orders={orders.data?.orders ?? []}
-        isLoading={orders.isLoading || batchUpdate.isPending}
-        onSort={handleSort}
-        sortBy={sortBy}
-        sortOrder={sortOrder}
-        selectedTeamId={selectedTeamId ?? ""}
-      />
-
-      {orders.data && orders.data.orders.length > 0 && (
-        <TablePagination
-          currentPage={page}
-          onPageChange={setPage}
-          totalPages={orders.data.pagination.pageCount}
-          isLoading={orders.isLoading}
+      {/* Main content area */}
+      <div
+        className={cn(
+          "space-y-4",
+          !hasOnboardingCompleted && "pointer-events-none opacity-20",
+        )}
+      >
+        {/* File upload */}
+        <FileUploadCard
+          latestImport={
+            importSummary.data?.[0]
+              ? {
+                  totalOrders: orderStats?.totalOrders ?? 0,
+                  fileName: importSummary.data[0].fileName,
+                }
+              : undefined
+          }
         />
-      )}
+
+        {/* Dashboard widgets */}
+        {latestImportId && (
+          <>
+            <div className="flex flex-row gap-2">
+              <div className="flex-1">
+                <TrackingOverview
+                  totalOrders={orderStats?.totalOrders ?? 0}
+                  trackingCount={orderStats?.trackingCount ?? 0}
+                  lastUpdateDate={
+                    importSummary.data?.[0]?.createdAt ?? new Date()
+                  }
+                />
+              </div>
+              <div className="flex-1">
+                <StatusDistribution
+                  chartData={chartData}
+                  totalOrders={orderStats?.totalOrders ?? 0}
+                />
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Search and filters */}
+        <SearchFilters
+          searchTerm={searchTerm}
+          onSearchChange={(value) => {
+            setSearchTerm(value);
+            setPage(1);
+          }}
+          statusFilter={statusFilter}
+          onStatusFilterChange={(value) => {
+            setStatusFilter(value);
+            setPage(1);
+          }}
+        />
+
+        {/* Orders table */}
+        <OrdersTable
+          orders={orders.data?.orders ?? []}
+          isLoading={orders.isLoading || batchUpdate.isPending}
+          onSort={handleSort}
+          sortBy={sortBy}
+          sortOrder={sortOrder}
+          selectedTeamId={selectedTeamId ?? ""}
+        />
+
+        {/* Pagination */}
+        {orders.data && orders.data.orders.length > 0 && (
+          <TablePagination
+            currentPage={page}
+            onPageChange={setPage}
+            totalPages={orders.data.pagination.pageCount}
+            isLoading={orders.isLoading}
+          />
+        )}
+
+        {/* Empty state */}
+        {hasOnboardingCompleted && !latestImportId && <NoOrdersView />}
+      </div>
+
     </div>
   );
 }
