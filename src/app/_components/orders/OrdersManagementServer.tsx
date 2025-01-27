@@ -1,9 +1,9 @@
 import { Suspense } from "react";
 import { api } from "~/trpc/server";
 import { OrdersManagementClient } from "./OrdersManagementClient";
-import { NoOrdersView } from "./dashboard/management/NoOrdersView";
-import { TeamSelector } from "./dashboard/management/TeamSelector";
-import { DashboardWidgetsServer } from "./DashboardWidgetsServer";
+import { TeamSelector } from "./management/TeamSelector";
+import { DashboardWidgetsServer } from "./dashboard/DashboardWidgetsServer";
+import { NoOrdersView } from "./management/NoOrdersView";
 
 export async function OrdersManagementServer() {
   // Server-side data fetching

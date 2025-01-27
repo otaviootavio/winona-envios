@@ -1,7 +1,7 @@
 "use client";
 
-import { StatusDistribution } from "./dashboard/management/StatusDistribution";
-import { TrackingOverview } from "./dashboard/management/TrackingOverview";
+import { StatusDistribution } from "./StatusDistribution";
+import { TrackingOverview } from "./TrackingOverview";
 
 type DashboardWidgetsClientProps = {
   chartData: Array<{ name: string; value: number }>;

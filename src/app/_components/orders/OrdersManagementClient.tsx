@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import { api, RouterOutputs } from "~/trpc/react";
-import { FileUploadCard } from "./FileUploadCard";
-import { SearchFilters } from "./dashboard/management/SearchFilters";
-import { OrdersTableSection } from "./OrdersTableSection";
 import type { OrderStatus } from "@prisma/client";
 import { SortableFields, type SortableFieldValue } from "~/constants/order";
+import { FileUploadCard } from "./upload/FileUploadCard";
+import { SearchFilters } from "./management/SearchFilters";
+import { OrdersTableSection } from "./table/OrdersTableSection";
 
 const ITEMS_PER_PAGE = 10;
 

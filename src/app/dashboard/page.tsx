@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { OrdersManagementServer } from "../_components/OrdersManagementServer";
+import { OrdersManagementServer } from "../_components/orders/OrdersManagementServer";
 
 export default async function DashboardPage() {
   return (
