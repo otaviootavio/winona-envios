@@ -26,7 +26,7 @@ export const NoCredentialsView = () => {
             independently.
           </p>
           <Button
-            onClick={() => router.push("/teams")}
+            onClick={() => router.push("/teams/personal")}
             className="w-full"
           >
             Configure API Key
@@ -48,7 +48,7 @@ export const NoCredentialsView = () => {
             others.
           </p>
           <Button
-            onClick={() => router.push("/teams")}
+            onClick={() => router.push("/teams/personal")}
             variant="secondary"
             className="w-full"
           >

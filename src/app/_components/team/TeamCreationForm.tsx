@@ -14,6 +14,7 @@ import {
 import { Input } from "~/components/ui/input";
 import { api } from "~/trpc/react";
 import { useToast } from "~/hooks/use-toast";
+import { useRouter } from "next/navigation";
 
 const formSchema = z.object({
   name: z.string().min(1, "Team name is required"),
@@ -26,6 +27,7 @@ interface TeamCreationFormProps {
 export function TeamCreationForm({
   isPersonal = false,
 }: TeamCreationFormProps) {
+  const router = useRouter()
   const { toast } = useToast();
   const utils = api.useUtils();
 
@@ -37,17 +39,18 @@ export function TeamCreationForm({
   });
 
   const createTeamMutation = api.team.create.useMutation({
-    onSuccess: () => {
+    onSuccess: async() => {
       toast({
         title: "Team created",
         description: "Your team has been created successfully.",
       });
       form.reset();
       if (isPersonal) {
-        void utils.team.getPersonalTeam.invalidate();
+        await utils.team.getPersonalTeam.invalidate();
       } else {
-        void utils.team.getOwnedTeams.invalidate();
+        await utils.team.getOwnedTeams.invalidate();
       }
+      await router.refresh();
     },
     onError: (error) => {
       toast({

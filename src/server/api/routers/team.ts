@@ -203,51 +203,34 @@ export const teamRouter = createTRPCRouter({
   }),
 
   getMemberships: protectedProcedure.query(async ({ ctx }) => {
-    try {
-      const memberships = await ctx.db.team.findMany({
-        where: {
-          members: {
-            some: { userId: ctx.session.user.id },
+    return ctx.db.team.findMany({
+      where: {
+        members: { some: { userId: ctx.session.user.id } },
+        adminId: { not: ctx.session.user.id },
+        personalForId: null,
+      },
+      include: {
+        correiosCredential: {
+          select: {
+            id: true,
+            identifier: true,
+            contract: true,
+            createdAt: true,
           },
-          adminId: { not: ctx.session.user.id }, // Exclude teams where user is admin
-          personalForId: null, // Exclude personal teams
         },
-        include: {
-          members: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true,
-                },
+        members: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
               },
             },
           },
-          correiosCredential: 
-          {
-            select: {
-              id: true,
-              identifier: true,
-              accessCode: false,
-              contract: true,
-              teamId: true,
-              createdById: true,
-              createdAt: true,
-              updatedAt: true,
-            },
-          },
         },
-      });
-
-      return memberships;
-    } catch (error) {
-      throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: "Failed to fetch team memberships",
-        cause: error,
-      });
-    }
+      },
+    });
   }),
 
   generateInviteLink: protectedProcedure
@@ -505,6 +488,118 @@ export const teamRouter = createTRPCRouter({
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Failed to delete team",
+          cause: error,
+        });
+      }
+    }),
+
+  getSelectedTeam: protectedProcedure.query(async ({ ctx }) => {
+    try {
+      const userWithTeam = await ctx.db.user.findUnique({
+        where: { id: ctx.session.user.id },
+        include: {
+          selectedTeam: {
+            include: {
+              members: {
+                include: {
+                  user: {
+                    select: {
+                      id: true,
+                      name: true,
+                      email: true,
+                    },
+                  },
+                },
+              },
+              correiosCredential: true,
+              personalFor: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                },
+              },
+              admin: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      return userWithTeam?.selectedTeam ?? null;
+    } catch (error) {
+      if (error instanceof TRPCError) throw error;
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Failed to fetch selected team",
+        cause: error,
+      });
+    }
+  }),
+
+  // Update the user's selected team
+  updateSelectedTeam: protectedProcedure
+    .input(z.object({ teamId: z.string().min(1, "Team ID is required") }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        // Verify team exists and user has access
+        const validTeam = await ctx.db.team.findFirst({
+          where: {
+            id: input.teamId,
+            OR: [
+              { adminId: ctx.session.user.id },
+              { personalForId: ctx.session.user.id },
+              { members: { some: { userId: ctx.session.user.id } } },
+            ],
+          },
+        });
+
+        if (!validTeam) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Team not found or you don't have access",
+          });
+        }
+
+        // Update selected team
+        const updatedUser = await ctx.db.user.update({
+          where: { id: ctx.session.user.id },
+          data: {
+            selectedTeam: {
+              connect: { id: input.teamId },
+            },
+          },
+          include: {
+            selectedTeam: {
+              include: {
+                members: {
+                  include: {
+                    user: {
+                      select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                      },
+                    },
+                  },
+                },
+                correiosCredential: true,
+              },
+            },
+          },
+        });
+
+        return updatedUser.selectedTeam;
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to update selected team",
           cause: error,
         });
       }

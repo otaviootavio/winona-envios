@@ -39,7 +39,7 @@ export function ExitTeamButton({
 
       // Invalidate the getMyTeams query to force a refetch
       await utils.team.getMyTeams.invalidate();
-      router.push("/teams"); // Redirect to teams page after exiting
+      router.push("/teams/memberships"); // Redirect to teams page after exiting
     },
     onError: (error) => {
       toast({
