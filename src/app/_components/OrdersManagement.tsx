@@ -9,7 +9,6 @@ import { OrdersTable } from "./OrdersTable";
 import { TablePagination } from "./TablePagination";
 import { type OrderStatus } from "@prisma/client";
 import { SortableFields, type SortableFieldValue } from "~/constants/order";
-import { useRouter } from "next/navigation";
 import { NoOrdersView } from "./dashboard/management/NoOrdersView";
 import { TrackingOverview } from "./dashboard/management/TrackingOverview";
 import { StatusDistribution } from "./dashboard/management/StatusDistribution";
@@ -19,13 +18,7 @@ import { cn } from "~/lib/utils"; // Make sure you have this utility
 
 const ITEMS_PER_PAGE = 10;
 
-interface ImportInfo {
-  totalOrders: number;
-  fileName: string;
-}
-
 export function OrdersManagement() {
-  const router = useRouter();
   const { toast } = useToast();
   const utils = api.useUtils();
 
@@ -38,17 +31,12 @@ export function OrdersManagement() {
   );
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
-  // Team data
-  const { data: teams, isLoading: isLoadingTeams } =
-    api.team.getMyTeams.useQuery();
   const { data: selectedTeam, isLoading: isLoadingSelected } =
     api.team.getSelectedTeam.useQuery();
 
   // Derived state
   const hasCredentials = !!selectedTeam?.correiosCredential;
   const selectedTeamId = selectedTeam?.id;
-  const needsTeamSelection = !selectedTeam;
-  const needsCredentials = selectedTeam && !hasCredentials;
   const hasOnboardingCompleted = selectedTeam && hasCredentials;
 
   // Order data
@@ -114,7 +102,7 @@ export function OrdersManagement() {
   };
 
   // Loading state
-  if (isLoadingTeams || isLoadingSelected) {
+  if (isLoadingSelected) {
     return (
       <div className="flex h-[50vh] items-center justify-center">
         <Alert>

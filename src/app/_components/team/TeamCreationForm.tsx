@@ -50,7 +50,7 @@ export function TeamCreationForm({
       } else {
         await utils.team.getOwnedTeams.invalidate();
       }
-      await router.refresh();
+      router.refresh();
     },
     onError: (error) => {
       toast({
