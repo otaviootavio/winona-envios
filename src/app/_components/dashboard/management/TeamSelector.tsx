@@ -76,7 +76,7 @@ export function TeamSelector() {
           </CardDescription>
         </div>
       </CardHeader>
-      <CardContent className="flex flex-col gap-4 justify-start">
+      <CardContent className="flex flex-col justify-start gap-4">
         <Select
           value={selectedTeam?.id ?? ""}
           onValueChange={(teamId) => updateTeam({ teamId })}
@@ -91,30 +91,34 @@ export function TeamSelector() {
           <SelectContent>
             {teams.map((team) => (
               <SelectItem key={team.id} value={team.id}>
-                <div className="flex w-full items-center justify-between">
-                  <span>{team.name}</span>
-                  {!team.correiosCredential && (
-                    <span className="text-xs text-yellow-500">
-                      (No Credentials)
-                    </span>
-                  )}
+                <div className="w-row flex w-full items-center justify-between">
+                  <span className="text-sm">
+                    {team.name}
+                    {!team.correiosCredential && (
+                      <span className="text-xs  mx-1 text-red-500">
+                        (No Credentials)
+                      </span>
+                    )}
+                  </span>
                 </div>
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
-          { !selectedTeam?.correiosCredential?.accessCode && <Alert variant="destructive">
+        {!selectedTeam?.correiosCredential?.accessCode && (
+          <Alert variant="destructive">
             <AlertTitle>Configure the Selected Team Credentials</AlertTitle>
             <AlertDescription>
               Add credentials to your selected team to enable order tracking.{" "}
               <button
-                onClick={() => router.push(`/teams`)}
+                onClick={() => router.push(`teams/personal`)}
                 className="font-semibold hover:underline"
               >
                 Configure credentials
               </button>
             </AlertDescription>
-          </Alert>}
+          </Alert>
+        )}
       </CardContent>
     </Card>
   );
