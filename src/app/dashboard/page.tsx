@@ -1,9 +1,7 @@
-import { auth } from "~/server/auth";
-import { OrdersManagement } from "~/app/_components/OrdersManagement";
+import { Suspense } from "react";
+import { OrdersManagementServer } from "../_components/orders/OrdersManagementServer";
 
 export default async function DashboardPage() {
-  await auth();
-
   return (
     <main className="container mx-auto px-4 py-8">
       <div className="mb-8">
@@ -12,8 +10,10 @@ export default async function DashboardPage() {
           Manage and track your imported orders
         </p>
       </div>
-      
-      <OrdersManagement />
+
+      <Suspense fallback={<div>Loading orders management...</div>}>
+        <OrdersManagementServer />
+      </Suspense>
     </main>
   );
 }

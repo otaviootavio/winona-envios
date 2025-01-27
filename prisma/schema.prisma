@@ -71,6 +71,7 @@ model User {
     selectedTeamid String?
     createdCredentials   CorreiosCredential[] @relation("CorreiosCredentialToUser")
     updatedCredentials   CorreiosCredential[] @relation("CorreiosCredentialUpdatedByUser")
+    @@index([selectedTeamid])
 }
 
 

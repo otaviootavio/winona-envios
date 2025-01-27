@@ -13,9 +13,10 @@ import {
 } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import { ArrowLeft, ArrowRight } from "lucide-react";
-import { CSVFileUpload } from './CSVFileUpload';
-import { CSVPreview } from './CSVPreview';
-import { CSVSubmission } from './CSVSubmission';
+import { CSVFileUpload } from "./CSVFileUpload";
+import { CSVPreview } from "./CSVPreview";
+import { CSVSubmission } from "./CSVSubmission";
+import { useRouter } from "next/navigation";
 
 type ImportStep = "upload" | "preview" | "submit";
 
@@ -25,6 +26,7 @@ export function CSVImportFlow() {
   const [parsedData, setParsedData] = useState<ParsedOrder[]>([]);
   const { toast } = useToast();
   const utils = api.useUtils();
+  const route = useRouter();
 
   // Step handlers
   const handleFileSelect = (selectedFile: File) => {
@@ -61,7 +63,9 @@ export function CSVImportFlow() {
       title: "Success",
       description: "Orders imported successfully",
     });
-    // Reset state and redirect or show success message
+    setTimeout(() => {
+      route.push("/dashboard");
+    }, 3000);
   };
 
   return (
@@ -148,7 +152,7 @@ export function CSVImportFlow() {
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back
         </Button>
-        
+
         {currentStep === "preview" && (
           <Button onClick={handleNext}>
             Next

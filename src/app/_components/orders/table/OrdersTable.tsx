@@ -1,3 +1,4 @@
+"use client";
 import { type Order, type OrderStatus } from "@prisma/client";
 import {
   Table,
@@ -13,6 +14,7 @@ import { useToast } from "~/hooks/use-toast";
 import { Loader2, ArrowUpDown } from "lucide-react";
 import { Badge } from "~/components/ui/badge";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 interface OrdersTableProps {
   orders: Order[];
@@ -35,6 +37,7 @@ export function OrdersTable({
   const { toast } = useToast();
   const [updatingOrders, setUpdatingOrders] = useState<Set<string>>(new Set());
   const [isUpdatingAll, setIsUpdatingAll] = useState(false);
+  const route = useRouter();
 
   const updateTracking = api.tracking.updateTracking.useMutation({
     onMutate: (variables) => {
@@ -206,6 +209,7 @@ export function OrdersTable({
                           trackingCode: order.trackingCode!,
                           teamId: selectedTeamId,
                         });
+                        route.refresh();
                       }}
                       disabled={updatingOrders.has(order.id)}
                     >
