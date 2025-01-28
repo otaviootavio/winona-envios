@@ -19,6 +19,7 @@ import { api } from "~/trpc/react";
 import { useToast } from "~/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { useRouter } from "next/navigation";
+import { Button } from "~/components/ui/button";
 
 export function TeamSelector() {
   const { toast } = useToast();
@@ -109,14 +110,15 @@ export function TeamSelector() {
         {!selectedTeam?.correiosCredential?.accessCode && (
           <Alert variant="destructive">
             <AlertTitle>Configure the Selected Team Credentials</AlertTitle>
-            <AlertDescription>
-              Add credentials to your selected team to enable order tracking.{" "}
-              <button
+            <AlertDescription className="space-y-2">
+              <p>Add credentials to your selected team to enable order tracking.</p>
+              <Button
+                variant="destructive"
                 onClick={() => router.push(`teams/personal`)}
                 className="font-semibold hover:underline"
               >
                 Configure credentials
-              </button>
+              </Button>
             </AlertDescription>
           </Alert>
         )}
