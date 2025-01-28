@@ -2,8 +2,6 @@ import Link from "next/link";
 import { auth } from "~/server/auth";
 import { HydrateClient } from "~/trpc/server";
 import { RainbowButton } from "~/components/ui/rainbow-button";
-import { InteractiveGridPattern } from "~/components/ui/interactive-grid-pattern";
-import { cn } from "~/lib/utils";
 import { FlickeringGrid } from "~/components/ui/flickering-grid";
 
 export default async function Home() {
