@@ -1,55 +1,47 @@
 "use client";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import * as z from "zod";
+
+import { useState } from "react";
 import { Button } from "~/components/ui/button";
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "~/components/ui/form";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "~/components/ui/dialog";
 import { Input } from "~/components/ui/input";
+import { Label } from "~/components/ui/label";
 import { api } from "~/trpc/react";
 import { useToast } from "~/hooks/use-toast";
 import { useRouter } from "next/navigation";
+import { Plus } from "lucide-react";
 
-const formSchema = z.object({
-  name: z.string().min(1, "Team name is required"),
-});
-
-interface TeamCreationFormProps {
+interface TeamCreationDialogProps {
   isPersonal?: boolean;
 }
 
-export function TeamCreationForm({
+export function TeamCreationDialog({
   isPersonal = false,
-}: TeamCreationFormProps) {
-  const router = useRouter()
+}: TeamCreationDialogProps) {
+  const router = useRouter();
   const { toast } = useToast();
   const utils = api.useUtils();
-
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: "",
-    },
-  });
+  const [teamName, setTeamName] = useState("");
+  const [open, setOpen] = useState(false);
 
   const createTeamMutation = api.team.create.useMutation({
-    onSuccess: async() => {
+    onSuccess: async () => {
       toast({
         title: "Team created",
         description: "Your team has been created successfully.",
       });
-      form.reset();
+      setTeamName("");
       if (isPersonal) {
         await utils.team.getPersonalTeam.invalidate();
       } else {
         await utils.team.getOwnedTeams.invalidate();
       }
+      setOpen(false);
       router.refresh();
     },
     onError: (error) => {
@@ -61,44 +53,60 @@ export function TeamCreationForm({
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!teamName.trim()) {
+      toast({
+        title: "Error",
+        description: "Team name is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
     createTeamMutation.mutate({
-      name: values.name,
+      name: teamName,
       isPersonal,
     });
-  }
+  };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <FormField
-          control={form.control}
-          name="name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Team Name</FormLabel>
-              <FormControl>
-                <Input
-                  placeholder={
-                    isPersonal ? "Your Personal Team Name" : "Team Name"
-                  }
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <Button
-          type="submit"
-          className="w-full"
-          disabled={createTeamMutation.isPending}
-        >
-          {createTeamMutation.isPending
-            ? "Creating..."
-            : `Create ${isPersonal ? "Personal" : ""} Team`}
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline">
+          <Plus /> Create new team
         </Button>
-      </form>
-    </Form>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Create {isPersonal ? "Personal" : ""} Team</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="name">Team Name</Label>
+            <Input
+              id="name"
+              placeholder={isPersonal ? "Your Personal Team Name" : "Team Name"}
+              value={teamName}
+              onChange={(e) => setTeamName(e.target.value)}
+            />
+          </div>
+          <div className="flex justify-end space-x-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={createTeamMutation.isPending}>
+              {createTeamMutation.isPending
+                ? "Creating..."
+                : `Create ${isPersonal ? "Personal" : ""} Team`}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

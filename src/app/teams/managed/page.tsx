@@ -1,8 +1,8 @@
 import { api } from "~/trpc/server";
 import { redirect } from "next/navigation";
 import { auth } from "~/server/auth";
-import { TeamCreationForm } from "~/app/_components/team/TeamCreationForm";
 import { TeamCard } from "~/app/_components/team/TeamCard";
+import { TeamCreationDialog } from "~/app/_components/team/TeamCreationForm";
 
 export default async function ManagedTeamsPage() {
   const session = await auth();
@@ -18,9 +18,9 @@ export default async function ManagedTeamsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Managed Teams</h1>
+        <h1 className="text-3xl font-bold">Managed Teams</h1>{" "}
+        <TeamCreationDialog isPersonal={false} />
       </div>
-      <TeamCreationForm isPersonal={false} />
 
       {managedTeams.length > 0 ? (
         <div className="space-y-6">
