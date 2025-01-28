@@ -136,7 +136,7 @@ const CredentialsDialog: React.FC<CredentialsDialogProps> = ({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button
-          variant={teamCredentials ? "outline" : "default"}
+          variant="destructive"
           className="gap-2"
         >
           <Settings className="h-4 w-4" />

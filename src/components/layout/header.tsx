@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { auth } from "~/server/auth";
 import { Button } from "~/components/ui/button";
+import { ModeToggle } from "../ui/mode-toggle";
 
 export async function Header() {
   const session = await auth();
@@ -24,11 +25,15 @@ export async function Header() {
               <Button asChild variant="outline">
                 <Link href="/api/auth/signout">Sign out</Link>
               </Button>
+              <ModeToggle />
             </>
           ) : (
-            <Button asChild variant="secondary">
-              <Link href="/api/auth/signin">Sign in</Link>
-            </Button>
+            <>
+              <Button asChild variant="secondary">
+                <Link href="/api/auth/signin">Sign in</Link>
+              </Button>
+              <ModeToggle />
+            </>
           )}
         </div>
       </div>

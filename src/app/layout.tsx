@@ -19,7 +19,9 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`min-h-screen bg-background font-sans antialiased ${GeistSans.variable}`}>
+      <body
+        className={`bg-background font-sans antialiased ${GeistSans.variable}`}
+      >
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -28,9 +30,9 @@ export default function RootLayout({
           storageKey="winona-theme"
         >
           <TRPCReactProvider>
-            <div className="relative flex min-h-screen flex-col">
+            <div className="relative flex flex-col min-h-screen">
               <Header />
-              <main className="flex-1 p-20">{children}</main>
+              <main className="flex flex-col min-h-max flex-1 p-5">{children}</main>
               <Footer />
             </div>
             <Toaster />
