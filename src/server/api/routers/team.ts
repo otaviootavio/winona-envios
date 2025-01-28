@@ -2,6 +2,7 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
 import { TRPCError } from "@trpc/server";
 import { randomBytes } from "crypto";
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 
 const INVITE_EXPIRY_HOURS = 24;
 
@@ -342,6 +343,16 @@ export const teamRouter = createTRPCRouter({
           team: invite.team,
         };
       } catch (error) {
+        if (
+          error instanceof PrismaClientKnownRequestError &&
+          error.code === "P2002"
+        ) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "You are already a member of this team",
+          });
+        }
+
         if (error instanceof TRPCError) throw error;
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
