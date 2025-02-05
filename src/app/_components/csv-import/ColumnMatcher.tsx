@@ -65,9 +65,9 @@ export function ColumnMatcher({
               {suggestedMatches.map((match) => (
                 <TableRow key={match.type}>
                   <TableCell className="font-medium">
-                    {match.type === 'orderNumber' && 'Order Number'}
-                    {match.type === 'shippingStatus' && 'Shipping Status'}
-                    {match.type === 'trackingCode' && 'Tracking Code'}
+                    {match.type === 'orderNumber' && <span>Order Number</span>}
+                    {match.type === 'shippingStatus' && <span>Shipping Status</span>}
+                    {match.type === 'trackingCode' && <span>Tracking Code</span>}
                     {match.type === 'orderNumber' && (
                       <span className="ml-1 text-red-500">*</span>
                     )}

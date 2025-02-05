@@ -1,3 +1,4 @@
+"use client";
 import { useState } from "react";
 import { type ParsedOrder } from "~/app/utils/csvParser";
 import {
@@ -194,9 +195,15 @@ export function CSVPreview({ data, file }: CSVPreviewProps) {
               <SelectValue placeholder="Filter by validation" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Orders</SelectItem>
-              <SelectItem value="valid">Valid Orders</SelectItem>
-              <SelectItem value="invalid">Invalid Tracking Codes</SelectItem>
+              <SelectItem value="all">
+                <span>All Orders</span>
+              </SelectItem>
+              <SelectItem value="valid">
+                <span>Valid Orders</span>
+              </SelectItem>
+              <SelectItem value="invalid">
+                <span>Invalid Tracking Codes</span>
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -211,7 +218,7 @@ export function CSVPreview({ data, file }: CSVPreviewProps) {
                     onClick={() => handleSort("orderNumber")}
                     className="flex items-center gap-1"
                   >
-                    Order Number
+                    <span>Order Number</span>
                     <SortIcon field="orderNumber" />
                   </Button>
                 </TableHead>
@@ -221,7 +228,7 @@ export function CSVPreview({ data, file }: CSVPreviewProps) {
                     onClick={() => handleSort("shippingStatus")}
                     className="flex items-center gap-1"
                   >
-                    Shipping Status
+                    <span>Shipping Status</span>
                     <SortIcon field="shippingStatus" />
                   </Button>
                 </TableHead>
@@ -231,7 +238,7 @@ export function CSVPreview({ data, file }: CSVPreviewProps) {
                     onClick={() => handleSort("trackingCode")}
                     className="flex items-center gap-1"
                   >
-                    Tracking Code
+                    <span>Tracking Code</span>
                     <SortIcon field="trackingCode" />
                   </Button>
                 </TableHead>
@@ -241,7 +248,7 @@ export function CSVPreview({ data, file }: CSVPreviewProps) {
                     onClick={() => handleSort("validation")}
                     className="flex items-center gap-1"
                   >
-                    Validation
+                    <span>Validation</span>
                     <SortIcon field="validation" />
                   </Button>
                 </TableHead>

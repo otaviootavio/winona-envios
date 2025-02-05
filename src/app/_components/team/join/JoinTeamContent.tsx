@@ -1,7 +1,7 @@
 "use client";
 
-import { useSearchParams, useRouter, redirect } from "next/navigation";
-import { useEffect, useState, Suspense } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { Button } from "~/components/ui/button";
 import {
   Card,
@@ -122,10 +122,10 @@ export function JoinTeamContent() {
             {joinTeamMutation.isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Joining...
+                <span>Joining...</span>
               </>
             ) : (
-              "Join Team"
+              <span>Join Team</span>
             )}
           </Button>
         </CardFooter>

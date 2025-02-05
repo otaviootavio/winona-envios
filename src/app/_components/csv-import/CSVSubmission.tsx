@@ -147,8 +147,12 @@ export function CSVSubmission({ data, file, onSuccess }: CSVSubmissionProps) {
       <div className="flex flex-row items-center justify-between">
         {/* Help Text */}
         <p className="text-left text-sm text-muted-foreground p-2">
-          By clicking Import Orders, only orders with valid tracking codes will
-          be imported. <br/>This action cannot be undone.
+          <span>
+            <span>
+              By clicking Import Orders, only orders with valid tracking codes will
+              be imported.
+            </span> <br/><span>This action cannot be undone.</span>
+          </span>
         </p>
 
         {/* Submit Button */}
@@ -161,12 +165,12 @@ export function CSVSubmission({ data, file, onSuccess }: CSVSubmissionProps) {
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Importing...
+                <span>Importing...</span>
               </>
             ) : isComplete ? (
               <>
                 <CheckCircle2 className="mr-2 h-4 w-4" />
-                Imported Successfully
+                <span>Imported Successfully</span>
               </>
             ) : (
               `Import ${validTrackingCount} Orders`

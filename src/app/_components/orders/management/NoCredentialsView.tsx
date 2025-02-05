@@ -29,7 +29,7 @@ export const NoCredentialsView = () => {
             onClick={() => router.push("/teams/personal")}
             className="w-full"
           >
-            Configure API Key
+            <span>Configure API Key</span>
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </CardContent>
@@ -52,7 +52,7 @@ export const NoCredentialsView = () => {
             variant="secondary"
             className="w-full"
           >
-            Find Teams
+            <span>Find Teams</span>
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </CardContent>

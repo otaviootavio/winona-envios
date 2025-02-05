@@ -74,12 +74,12 @@ export function TeamCreationDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline">
-          <Plus /> Create new team
+          <Plus /><span> Create new team</span>
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Create {isPersonal ? "Personal" : ""} Team</DialogTitle>
+          <DialogTitle><span><span>Create&nbsp;</span><span>{isPersonal ? "Personal" : ""}</span><span>&nbsp;Team</span></span></DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">

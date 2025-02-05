@@ -5,12 +5,14 @@ const config = {
     "project": true
   },
   "plugins": [
-    "@typescript-eslint"
+    "@typescript-eslint",
+    "@sayari"
   ],
   "extends": [
     "next/core-web-vitals",
     "plugin:@typescript-eslint/recommended-type-checked",
-    "plugin:@typescript-eslint/stylistic-type-checked"
+    "plugin:@typescript-eslint/stylistic-type-checked",
+    "plugin:@sayari/recommended"
   ],
   "rules": {
     "@typescript-eslint/array-type": "off",
@@ -36,7 +38,23 @@ const config = {
           "attributes": false
         }
       }
-    ]
+    ],
+    "@sayari/no-unwrapped-jsx-text": "error",
+  },
+  settings: {
+    // Add components that should have wrapped text nodes
+    "@sayari/jsx-wrap-text": {
+      components: [
+        "p",
+        "div",
+        "span",
+        "TableCell",
+        "label",
+        "CardDescription",
+        "AlertDescription"
+      ]
+    }
   }
+
 }
 module.exports = config;
