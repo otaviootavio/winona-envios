@@ -150,12 +150,12 @@ export function CSVImportFlow() {
           disabled={currentStep === "upload"}
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back
+          <span>Back</span>
         </Button>
 
         {currentStep === "preview" && (
           <Button onClick={handleNext}>
-            Next
+            <span>Next</span>
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         )}

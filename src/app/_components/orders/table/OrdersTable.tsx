@@ -140,10 +140,10 @@ export function OrdersTable({
           {isUpdatingAll ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Updating All Orders...
+              <span>Updating All Orders...</span>
             </>
           ) : (
-            "Update All Orders"
+            <span>Update All Orders</span>
           )}
         </Button>
       </div>
@@ -167,7 +167,7 @@ export function OrdersTable({
             <TableRow>
               <TableCell colSpan={5} className="text-center">
                 <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />
-                Loading...
+                <span>Loading...</span>
               </TableCell>
             </TableRow>
           ) : orders.length === 0 ? (
@@ -216,10 +216,10 @@ export function OrdersTable({
                       {updatingOrders.has(order.id) ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Updating...
+                          <span>Updating...</span>
                         </>
                       ) : (
-                        "Update Tracking"
+                        "Update"
                       )}
                     </Button>
                   )}

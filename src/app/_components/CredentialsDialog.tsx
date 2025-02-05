@@ -140,7 +140,7 @@ const CredentialsDialog: React.FC<CredentialsDialogProps> = ({
           className="gap-2"
         >
           <Settings className="h-4 w-4" />
-          {teamCredentials ? "Manage Credentials" : "Configure Credentials"}
+          <span>{teamCredentials ? "Manage Credentials" : "Configure Credentials"}</span>
         </Button>
       </DialogTrigger>
 
@@ -234,7 +234,7 @@ const CredentialsDialog: React.FC<CredentialsDialogProps> = ({
                       className="gap-2"
                     >
                       <Trash2 className="h-4 w-4" />
-                      Remove
+                      <span>Remove</span>
                     </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
@@ -279,7 +279,7 @@ const CredentialsDialog: React.FC<CredentialsDialogProps> = ({
                   {saveCredentialsMutation.isPending && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
-                  Save
+                  <span>Save</span>
                 </Button>
               </div>
             </div>

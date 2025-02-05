@@ -43,7 +43,7 @@ const PersonalTeamCard = () => {
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="flex items-center gap-2">
-              Personal Account
+              <span>Personal Account</span>
               <Badge variant={hasCredentials ? "default" : "destructive"}>
                 {hasCredentials ? "Ready" : "Setup Required"}
               </Badge>

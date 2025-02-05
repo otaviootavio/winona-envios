@@ -44,12 +44,13 @@ export const SearchFilters = ({
         <SelectValue placeholder="Filter by status" />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="all">All Statuses</SelectItem>
-        <SelectItem value={OrderStatus.POSTED}>Posted</SelectItem>
-        <SelectItem value={OrderStatus.NOT_FOUND}>Not found</SelectItem>
-        <SelectItem value={OrderStatus.IN_TRANSIT}>In transit</SelectItem>
-        <SelectItem value={OrderStatus.DELIVERED}>Delivered</SelectItem>
-        <SelectItem value={OrderStatus.UNKNOWN}>Unknown</SelectItem>
+        <SelectItem value="all"><span>All Statuses</span></SelectItem>
+        <SelectItem value={OrderStatus.POSTED}><span>Posted</span>
+        </SelectItem>
+        <SelectItem value={OrderStatus.NOT_FOUND}><span>Not found</span></SelectItem>
+        <SelectItem value={OrderStatus.IN_TRANSIT}><span>In transit</span></SelectItem>
+        <SelectItem value={OrderStatus.DELIVERED}><span>Delivered</span></SelectItem>
+        <SelectItem value={OrderStatus.UNKNOWN}><span>Unknown</span></SelectItem>
       </SelectContent>
     </Select>
   </div>

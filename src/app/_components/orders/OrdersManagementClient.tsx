@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { api, RouterOutputs } from "~/trpc/react";
+import { api,type RouterOutputs } from "~/trpc/react";
 import type { OrderStatus } from "@prisma/client";
 import { SortableFields, type SortableFieldValue } from "~/constants/order";
 import { FileUploadCard } from "./upload/FileUploadCard";
