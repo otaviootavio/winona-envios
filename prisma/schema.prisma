@@ -109,7 +109,7 @@ model Order {
     trackingCode     String?     // tracking code if available
     
     // Import batch reference
-    orderImport     OrderImport @relation(fields: [orderImportId], references: [id])
+    orderImport     OrderImport @relation(fields: [orderImportId], references: [id], onDelete: Cascade)
     orderImportId   String
 
     createdAt       DateTime    @default(now())
