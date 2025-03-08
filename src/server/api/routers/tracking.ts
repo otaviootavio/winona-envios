@@ -173,9 +173,7 @@ export const trackingRouter = createTRPCRouter({
       const order = await ctx.db.order.findFirst({
         where: {
           id: input.orderId,
-          orderImport: {
-            userId: ctx.session.user.id,
-          },
+          userId: ctx.session.user.id,
         },
       });
 
@@ -252,9 +250,7 @@ export const trackingRouter = createTRPCRouter({
         where: {
           id: { in: input.orderIds },
           trackingCode: { not: null },
-          orderImport: {
-            userId: ctx.session.user.id,
-          },
+          userId: ctx.session.user.id,
         },
       });
 
@@ -302,32 +298,11 @@ export const trackingRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       try {
-        // First, find the latest order import for the user
-        const latestImport = await ctx.db.orderImport.findFirst({
-          where: {
-            userId: ctx.session.user.id,
-          },
-          orderBy: {
-            createdAt: "desc",
-          },
-        });
-
-        if (!latestImport) {
-          return {
-            totalProcessed: 0,
-            successfulUpdates: 0,
-            message: "No order imports found",
-          };
-        }
-
-        // Get all orders from the latest import that have tracking codes
+        // Get all orders with tracking codes
         const orders = await ctx.db.order.findMany({
           where: {
             trackingCode: { not: null },
-            orderImportId: latestImport.id,
-            orderImport: {
-              userId: ctx.session.user.id,
-            },
+            userId: ctx.session.user.id,
           },
         });
 
@@ -341,7 +316,6 @@ export const trackingRouter = createTRPCRouter({
         let successCount = 0;
 
         for (const batch of batches) {
-          // Refresh token for each batch to ensure it's valid
           const currentRepo = await getCorreiosRepository(ctx, input.teamId);
 
           const updates = await Promise.allSettled(
@@ -383,8 +357,6 @@ export const trackingRouter = createTRPCRouter({
         return {
           totalProcessed: orders.length,
           successfulUpdates: successCount,
-          importId: latestImport.id,
-          importDate: latestImport.createdAt,
         };
       } catch (error) {
         if (error instanceof TRPCError && error.code === "UNAUTHORIZED") {

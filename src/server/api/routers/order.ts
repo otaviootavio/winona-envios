@@ -31,14 +31,14 @@ export const orderRouter = createTRPCRouter({
     .input(importOrdersSchema)
     .mutation(async ({ ctx, input }) => {
       try {
-        const orderImport = await ctx.db.orderImport.create({
-          data: {
-            fileName: input.fileName,
-            status: "processing",
-            user: { connect: { id: ctx.session.user.id } },
+        // First, delete all existing orders for the user
+        await ctx.db.order.deleteMany({
+          where: {
+            userId: ctx.session.user.id,
           },
         });
 
+        // Then create the new orders
         const orders = await ctx.db.order.createMany({
           data: input.orders.map(
             (order) =>
@@ -46,18 +46,13 @@ export const orderRouter = createTRPCRouter({
                 orderNumber: order.orderNumber,
                 shippingStatus: OrderStatus.UNKNOWN,
                 trackingCode: order.trackingCode,
-                orderImportId: orderImport.id,
+                fileName: input.fileName,
+                userId: ctx.session.user.id,
               }) satisfies Prisma.OrderCreateManyInput,
           ),
         });
 
-        await ctx.db.orderImport.update({
-          where: { id: orderImport.id },
-          data: { status: "completed" },
-        });
-
         return {
-          importId: orderImport.id,
           totalOrders: orders.count,
         };
       } catch (error) {
@@ -71,26 +66,36 @@ export const orderRouter = createTRPCRouter({
 
   getImportsSummary: protectedProcedure.query(async ({ ctx }) => {
     try {
-      return ctx.db.orderImport.findMany({
+      // Get the latest import info directly from orders
+      const latestOrder = await ctx.db.order.findFirst({
         where: { userId: ctx.session.user.id },
-        take: 5,
         orderBy: { createdAt: "desc" },
         select: {
-          id: true,
+          fileName: true,
           createdAt: true,
           updatedAt: true,
-          status: true,
-          fileName: true,
-          userId: true,
-          _count: {
-            select: { orders: true },
-          },
         },
       });
+
+      if (!latestOrder) return null;
+
+      const orderCount = await ctx.db.order.count({
+        where: {
+          userId: ctx.session.user.id,
+          fileName: latestOrder.fileName,
+        },
+      });
+
+      return [{
+        fileName: latestOrder.fileName,
+        createdAt: latestOrder.createdAt,
+        updatedAt: latestOrder.updatedAt,
+        _count: { orders: orderCount },
+      }];
     } catch (error) {
       throw new TRPCError({
         code: "INTERNAL_SERVER_ERROR",
-        message: "Failed to fetch imports summary",
+        message: "Failed to fetch import summary",
         cause: error,
       });
     }
@@ -99,7 +104,6 @@ export const orderRouter = createTRPCRouter({
   getImportOrders: protectedProcedure
     .input(
       z.object({
-        importId: z.string(),
         page: z.number().min(1).default(1),
         pageSize: z.number().min(1).max(100).default(10),
         filters: orderFilterSchema.optional(),
@@ -110,8 +114,7 @@ export const orderRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       try {
         const where: Prisma.OrderWhereInput = {
-          orderImportId: input.importId,
-          orderImport: { userId: ctx.session.user.id },
+          userId: ctx.session.user.id,
           ...(input.filters?.search
             ? {
                 OR: [
@@ -158,39 +161,35 @@ export const orderRouter = createTRPCRouter({
       }
     }),
 
-  getOrderStats: protectedProcedure
-    .input(z.object({ importId: z.string() }))
-    .query(async ({ ctx, input }) => {
-      try {
-        const stats = await ctx.db.order.groupBy({
-          by: ["shippingStatus"],
-          where: {
-            orderImportId: input.importId,
-            orderImport: { userId: ctx.session.user.id },
-          },
-          _count: true,
-        });
+  getOrderStats: protectedProcedure.query(async ({ ctx }) => {
+    try {
+      const stats = await ctx.db.order.groupBy({
+        by: ["shippingStatus"],
+        where: {
+          userId: ctx.session.user.id,
+        },
+        _count: true,
+      });
 
-        const totalOrders = stats.reduce((sum, stat) => sum + stat._count, 0);
-        const trackingCount = await ctx.db.order.count({
-          where: {
-            orderImportId: input.importId,
-            orderImport: { userId: ctx.session.user.id },
-            trackingCode: { not: null },
-          },
-        });
+      const totalOrders = stats.reduce((sum, stat) => sum + stat._count, 0);
+      const trackingCount = await ctx.db.order.count({
+        where: {
+          userId: ctx.session.user.id,
+          trackingCode: { not: null },
+        },
+      });
 
-        return {
-          statusBreakdown: stats,
-          totalOrders,
-          trackingCount,
-        };
-      } catch (error) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to fetch order statistics",
-          cause: error,
-        });
-      }
-    }),
+      return {
+        statusBreakdown: stats,
+        totalOrders,
+        trackingCount,
+      };
+    } catch (error) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Failed to fetch order stats",
+        cause: error,
+      });
+    }
+  }),
 });

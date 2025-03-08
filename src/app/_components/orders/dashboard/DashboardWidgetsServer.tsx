@@ -2,16 +2,9 @@
 import { api } from "~/trpc/server";
 import { DashboardWidgetsClient } from "./DashboardWidgetsClient";
 
-type DashboardWidgetsServerProps = {
-  latestImportId: string;
-};
-
-export async function DashboardWidgetsServer({ latestImportId }: DashboardWidgetsServerProps) {
+export async function DashboardWidgetsServer() {
   // Server-side data fetching
-  const orderStats = await api.order.getOrderStats({ 
-    importId: latestImportId 
-  });
-  
+  const orderStats = await api.order.getOrderStats();
   const importSummary = await api.order.getImportsSummary();
 
   // Transform data for the client component

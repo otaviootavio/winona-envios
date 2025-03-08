@@ -80,6 +80,7 @@ export function OrdersTable({
         title: "Batch Update Complete",
         description: `Successfully updated ${data.successfulUpdates} out of ${data.totalProcessed} orders`,
       });
+      route.refresh();
     },
     onError: (error) => {
       toast({

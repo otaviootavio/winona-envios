@@ -1,7 +1,6 @@
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { type DefaultSession, type NextAuthConfig } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
-import { type AdapterUser } from "@auth/core/adapters";
 
 import { db } from "~/server/db";
 
@@ -75,7 +74,7 @@ export const authConfig = {
         emailVerified: result.emailVerified,
         name: result.name,
         image: result.image,
-      } satisfies AdapterUser;
+      };
     },
   },
   callbacks: {

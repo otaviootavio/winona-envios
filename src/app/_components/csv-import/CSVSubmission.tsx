@@ -139,8 +139,8 @@ export function CSVSubmission({ data, file, onSuccess }: CSVSubmissionProps) {
           <CheckCircle2 className="h-4 w-4" />
           <AlertTitle>Success</AlertTitle>
           <AlertDescription>
-            {validTrackingCount} orders have been successfully imported and are
-            ready for tracking.
+            Your previous orders have been replaced with {validTrackingCount} new orders.
+            They are now ready for tracking.
           </AlertDescription>
         </Alert>
       )}

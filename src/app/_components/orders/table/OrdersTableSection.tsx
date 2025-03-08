@@ -9,7 +9,6 @@ import type { OrderStatus } from "@prisma/client";
 import type { SortableFieldValue } from "~/constants/order";
 
 type OrdersTableSectionProps = {
-  latestImportId: string;
   teamId: string;
   page: number;
   onPageChange: (page: number) => void;
@@ -21,7 +20,6 @@ type OrdersTableSectionProps = {
 };
 
 export function OrdersTableSection({
-  latestImportId,
   teamId,
   page,
   onPageChange,
@@ -39,7 +37,6 @@ export function OrdersTableSection({
   const { data: orders, isLoading: ordersLoading } =
     api.order.getImportOrders.useQuery(
       {
-        importId: latestImportId,
         page,
         pageSize: ITEMS_PER_PAGE,
         filters: {
@@ -48,9 +45,6 @@ export function OrdersTableSection({
         },
         sortBy,
         sortOrder,
-      },
-      {
-        enabled: !!latestImportId,
       },
     );
 
