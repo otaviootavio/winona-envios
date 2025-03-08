@@ -39,7 +39,7 @@ export function FileUploadCard({ latestImport }: FileUploadCardProps) {
 
           {latestImport && latestImport.totalOrders > 0 && (
             <Alert>
-              <AlertTitle>Latest Import</AlertTitle>
+              <AlertTitle>Current Import</AlertTitle>
               <AlertDescription>
                 {latestImport.totalOrders} orders imported from {latestImport.fileName}
               </AlertDescription>

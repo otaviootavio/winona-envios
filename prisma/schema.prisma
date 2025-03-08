@@ -63,7 +63,7 @@ model User {
     accounts             Account[]
     sessions             Session[]
     posts                Post[]
-    orderImports         OrderImport[]
+    orders               Order[]
     personalTeam         Team?                @relation("PersonalTeam")
     ownedTeams           Team[]               @relation("TeamAdmin")
     teamMemberships      TeamMember[]
@@ -87,38 +87,23 @@ model VerificationToken {
 // TODO 
 // IS IT REALLY NECESSARY?
 // New models for order management
-model OrderImport {
-    id        String   @id @default(cuid())
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-    status    String   // e.g., 'processing', 'completed', 'failed'
-    fileName  String
-    
-    // Relationship with User who imported
-    user      User     @relation(fields: [userId], references: [id])
-    userId    String
-    
-    // Relationship with Orders
-    orders    Order[]
-}
-
 model Order {
-    id                String      @id @default(cuid())
-    orderNumber      String      // original order number from the shop
+    id            String      @id @default(cuid())
+    orderNumber   String      // original order number from the shop
     shippingStatus OrderStatus @default(UNKNOWN)
-    trackingCode     String?     // tracking code if available
-    
-    // Import batch reference
-    orderImport     OrderImport @relation(fields: [orderImportId], references: [id], onDelete: Cascade)
-    orderImportId   String
+    trackingCode  String?     // tracking code if available
+    fileName      String      // Name of the imported file
+    createdAt     DateTime    @default(now())
+    updatedAt     DateTime    @updatedAt
 
-    createdAt       DateTime    @default(now())
-    updatedAt       DateTime    @updatedAt
+    // Add direct relationship to User
+    user          User     @relation(fields: [userId], references: [id])
+    userId        String
 
     @@index([orderNumber])
     @@index([trackingCode])
+    @@index([userId])
 }
-
 
 enum OrderStatus {
   UNKNOWN     @map("DESCONHECIDO")  // Initial state

@@ -15,8 +15,6 @@ export async function OrdersManagementServer() {
     ? await api.order.getImportsSummary()
     : null;
 
-  const latestImportId = importSummary?.[0]?.id ?? "";
-
   return (
     <div className="w-full space-y-4">
       <Suspense fallback={<div>Loading teams...</div>}>
@@ -26,11 +24,10 @@ export async function OrdersManagementServer() {
       {hasOnboardingCompleted ? (
         <OrdersManagementClient
           initialTeamId={selectedTeam.id}
-          latestImportId={latestImportId}
           importSummary={importSummary}
         >
           <Suspense fallback={<div>Loading dashboard stats...</div>}>
-            <DashboardWidgetsServer latestImportId={latestImportId} />
+            <DashboardWidgetsServer />
           </Suspense>
         </OrdersManagementClient>
       ) : (

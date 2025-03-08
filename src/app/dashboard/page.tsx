@@ -1,7 +1,16 @@
 import { Suspense } from "react";
 import { OrdersManagementServer } from "../_components/orders/OrdersManagementServer";
+import { redirect } from "next/navigation";
+import { auth } from "~/server/auth";
 
 export default async function DashboardPage() {
+  const session = await auth();
+
+  // Redirect if not authenticated
+  if (!session?.user) {
+    redirect("/api/auth/signin");
+  }
+
   return (
     <main className="container mx-auto px-4 py-8">
       <div className="mb-8">

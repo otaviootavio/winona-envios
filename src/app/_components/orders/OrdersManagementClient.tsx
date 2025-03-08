@@ -11,14 +11,12 @@ import { OrdersTableSection } from "./table/OrdersTableSection";
 type OrdersManagementClientProps = {
   children: React.ReactNode;
   initialTeamId: string;
-  latestImportId: string;
   importSummary: RouterOutputs["order"]["getImportsSummary"] | null;
 };
 
 export function OrdersManagementClient({
   children,
   initialTeamId,
-  latestImportId,
   importSummary,
 }: OrdersManagementClientProps) {
   // Client-side state
@@ -41,11 +39,8 @@ export function OrdersManagementClient({
     setPage(1);
   };
 
-  // Get order stats for file upload card
-  const { data: orderStats } = api.order.getOrderStats.useQuery(
-    { importId: latestImportId },
-    { enabled: !!latestImportId },
-  );
+  // Get order stats directly
+  const { data: orderStats } = api.order.getOrderStats.useQuery();
 
   return (
     <div className="space-y-4">
@@ -76,7 +71,6 @@ export function OrdersManagementClient({
       />
 
       <OrdersTableSection
-        latestImportId={latestImportId}
         teamId={initialTeamId}
         page={page}
         onPageChange={setPage}
