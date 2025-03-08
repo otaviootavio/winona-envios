@@ -31,29 +31,35 @@ export const orderRouter = createTRPCRouter({
     .input(importOrdersSchema)
     .mutation(async ({ ctx, input }) => {
       try {
-        // First, delete all existing orders for the user
-        await ctx.db.order.deleteMany({
-          where: {
-            userId: ctx.session.user.id,
-          },
-        });
 
-        // Then create the new orders
-        const orders = await ctx.db.order.createMany({
-          data: input.orders.map(
-            (order) =>
-              ({
-                orderNumber: order.orderNumber,
-                shippingStatus: OrderStatus.UNKNOWN,
-                trackingCode: order.trackingCode,
-                fileName: input.fileName,
-                userId: ctx.session.user.id,
-              }) satisfies Prisma.OrderCreateManyInput,
-          ),
+        // Use a transaction to ensure both operations are atomic
+        const result = await ctx.db.$transaction(async (tx) => {
+          // First, delete all existing orders for the user
+          await tx.order.deleteMany({
+            where: {
+              userId: ctx.session.user.id,
+            },
+          });
+
+          // Then create the new orders
+          const orders = await tx.order.createMany({
+            data: input.orders.map(
+              (order) =>
+                ({
+                  orderNumber: order.orderNumber,
+                  shippingStatus: OrderStatus.UNKNOWN,
+                  trackingCode: order.trackingCode,
+                  fileName: input.fileName,
+                  userId: ctx.session.user.id,
+                }) satisfies Prisma.OrderCreateManyInput,
+            ),
+          });
+
+          return orders;
         });
 
         return {
-          totalOrders: orders.count,
+          totalOrders: result.count,
         };
       } catch (error) {
         throw new TRPCError({
