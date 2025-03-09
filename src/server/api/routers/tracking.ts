@@ -40,7 +40,16 @@ const authRepo = new CorreiosAuthRepository();
 const getCorreiosRepository = async (
   ctx: Context,
   teamId?: string,
-): Promise<CorreiosRepository> => {
+  tokenCache?: { token: string; expiry: Date },
+): Promise<{ repo: CorreiosRepository; tokenCache: { token: string; expiry: Date } }> => {
+  // If we have a valid cached token, reuse it
+  if (tokenCache && new Date() < tokenCache.expiry) {
+    return { 
+      repo: new CorreiosRepository(tokenCache.token),
+      tokenCache
+    };
+  }
+
   // Get the team - either specified team or personal team
   const team = teamId
     ? await ctx.db.team.findFirst({
@@ -85,7 +94,19 @@ const getCorreiosRepository = async (
       },
     );
 
-    return new CorreiosRepository(tokenResponse.token);
+    // Calculate expiry time (subtract 5 minutes for safety margin)
+    const expiryDate = new Date(tokenResponse.expiraEm);
+    expiryDate.setMinutes(expiryDate.getMinutes() - 5);
+    
+    const newTokenCache = { 
+      token: tokenResponse.token, 
+      expiry: expiryDate 
+    };
+    
+    return { 
+      repo: new CorreiosRepository(tokenResponse.token),
+      tokenCache: newTokenCache
+    };
   } catch (error) {
     console.error("Authentication failed:", error);
     throw new TRPCError({
@@ -138,9 +159,9 @@ export const trackingRouter = createTRPCRouter({
     .input(trackingCodeSchema)
     .query(async ({ ctx, input }) => {
       try {
-        const correiosRepo = await getCorreiosRepository(ctx);
+        const { repo } = await getCorreiosRepository(ctx);
         const result = await processTrackingInfo(
-          correiosRepo,
+          repo,
           input.trackingCode,
         );
 
@@ -185,9 +206,9 @@ export const trackingRouter = createTRPCRouter({
       }
 
       try {
-        const correiosRepo = await getCorreiosRepository(ctx, input.teamId);
+        const { repo } = await getCorreiosRepository(ctx, input.teamId);
         const result = await processTrackingInfo(
-          correiosRepo,
+          repo,
           input.trackingCode,
         );
 
@@ -221,9 +242,9 @@ export const trackingRouter = createTRPCRouter({
     .input(trackingCodeSchema)
     .query(async ({ ctx, input }) => {
       try {
-        const correiosRepo = await getCorreiosRepository(ctx);
+        const { repo } = await getCorreiosRepository(ctx);
         const result = await processTrackingInfo(
-          correiosRepo,
+          repo,
           input.trackingCode,
         );
         return { exists: result.success };
@@ -244,7 +265,7 @@ export const trackingRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const correiosRepo = await getCorreiosRepository(ctx, input.teamId);
+      const { repo } = await getCorreiosRepository(ctx, input.teamId);
 
       const orders = await ctx.db.order.findMany({
         where: {
@@ -260,7 +281,7 @@ export const trackingRouter = createTRPCRouter({
 
           try {
             const result = await processTrackingInfo(
-              correiosRepo,
+              repo,
               order.trackingCode,
             );
 
@@ -306,7 +327,14 @@ export const trackingRouter = createTRPCRouter({
           },
         });
 
-        const batchSize = 50;
+        if (orders.length === 0) {
+          return {
+            totalProcessed: 0,
+            successfulUpdates: 0,
+          };
+        }
+
+        const batchSize = 50; // Maximum allowed by Correios API
         const batches = [];
 
         for (let i = 0; i < orders.length; i += batchSize) {
@@ -314,42 +342,95 @@ export const trackingRouter = createTRPCRouter({
         }
 
         let successCount = 0;
+        let tokenCache: { token: string; expiry: Date; } | undefined = undefined;
 
         for (const batch of batches) {
-          const currentRepo = await getCorreiosRepository(ctx, input.teamId);
-
-          const updates = await Promise.allSettled(
-            batch.map(async (order) => {
-              if (!order.trackingCode) return null;
-
-              try {
-                const result = await processTrackingInfo(
-                  currentRepo,
-                  order.trackingCode,
-                );
-
-                return ctx.db.order.update({
-                  where: { id: order.id },
-                  data: {
-                    shippingStatus: result.status,
-                  },
-                });
-              } catch (error) {
-                console.error(
-                  `Failed to update tracking for order ${order.id}:`,
-                  error,
-                );
-                return null;
+          try {
+            // Reuse token if available
+            const { repo, tokenCache: newTokenCache } = await getCorreiosRepository(
+              ctx, 
+              input.teamId,
+              tokenCache
+            );
+            
+            // Update token cache for next iteration
+            tokenCache = newTokenCache;
+            
+            // Extract tracking codes from the batch
+            const trackingCodes = batch
+              .map(order => order.trackingCode)
+              .filter(Boolean) as string[];
+            
+            if (trackingCodes.length === 0) continue;
+            
+            // Use batch API call instead of individual calls
+            const trackingResponse = await repo.getMultipleObjectsTracking(trackingCodes, "U");
+            
+            // Group orders by status to reduce database calls
+            const orderUpdates: Record<OrderStatus, string[]> = {
+              [OrderStatus.DELIVERED]: [],
+              [OrderStatus.IN_TRANSIT]: [],
+              [OrderStatus.POSTED]: [],
+              [OrderStatus.NOT_FOUND]: [],
+              [OrderStatus.UNKNOWN]: [],
+            };
+            
+            // Process the batch response and group by status
+            batch.forEach(order => {
+              if (!order.trackingCode) return;
+              
+              // Find this order's tracking info in the batch response
+              const trackingObject = trackingResponse.objetos.find(
+                obj => obj.codObjeto === order.trackingCode
+              );
+              
+              if (!trackingObject?.eventos?.length) {
+                orderUpdates[OrderStatus.NOT_FOUND].push(order.id);
+                return;
               }
-            }),
-          );
-
-          successCount += updates.filter(
-            (result) => result.status === "fulfilled" && result.value !== null,
-          ).length;
+              
+              const latestEvent = trackingObject.eventos[0];
+              if (!latestEvent) {
+                orderUpdates[OrderStatus.NOT_FOUND].push(order.id);
+                return;
+              }
+              
+              const status = determineOrderStatus(latestEvent.descricao);
+              orderUpdates[status].push(order.id);
+            });
+            
+            // Only run transaction if we have updates to make
+            const hasUpdates = Object.values(orderUpdates).some(ids => ids.length > 0);
+            
+            if (hasUpdates) {
+              // Use a transaction to perform all updates in a single database operation
+              const updateResults = await ctx.db.$transaction(
+                Object.entries(orderUpdates)
+                  .filter(([_, orderIds]) => orderIds.length > 0)
+                  .map(([status, orderIds]) => 
+                    ctx.db.order.updateMany({
+                      where: { 
+                        id: { in: orderIds },
+                        userId: ctx.session.user.id 
+                      },
+                      data: { shippingStatus: status as OrderStatus }
+                    })
+                  )
+              );
+              
+              // Count successful updates
+              successCount += updateResults.reduce((sum, result) => sum + result.count, 0);
+            }
+          } catch (error) {
+            console.error(`Failed to process batch:`, error);
+            // If token error, clear the cache to force re-authentication
+            if (error instanceof TRPCError && error.code === "UNAUTHORIZED") {
+              tokenCache = undefined;
+            }
+          }
 
           // Add delay between batches to respect rate limits
-          if (batches.length > 1) {
+          if (batches.length > 1 && batches.indexOf(batch) < batches.length - 1) {
             await new Promise((resolve) => setTimeout(resolve, 1000));
           }
         }
