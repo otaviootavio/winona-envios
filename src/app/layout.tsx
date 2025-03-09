@@ -7,7 +7,8 @@ import { ThemeProvider } from "~/components/ui/theme-provider";
 import { Toaster } from "~/components/ui/toaster";
 import { Header } from "~/components/layout/header";
 import { Footer } from "~/components/layout/footer";
-
+import { SpeedInsights } from "@vercel/speed-insights/next";
+import { PostHogProvider } from "~/app/providers";
 export const metadata: Metadata = {
   title: "Winona Envios",
   description: "Track your shipments with Winona Envios",
@@ -29,13 +30,18 @@ export default function RootLayout({
           disableTransitionOnChange
           storageKey="winona-theme"
         >
+          <SpeedInsights />
           <TRPCReactProvider>
-            <div className="relative flex flex-col min-h-screen">
-              <Header />
-              <main className="flex flex-col min-h-max flex-1 p-5">{children}</main>
-              <Footer />
-            </div>
-            <Toaster />
+            <PostHogProvider>
+              <div className="relative flex min-h-screen flex-col">
+                <Header />
+                <main className="flex min-h-max flex-1 flex-col p-5">
+                  {children}
+                </main>
+                <Footer />
+              </div>
+              <Toaster />
+            </PostHogProvider>
           </TRPCReactProvider>
         </ThemeProvider>
       </body>
