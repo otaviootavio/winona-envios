@@ -1,19 +1,27 @@
 import { Suspense } from "react";
-import { api } from "~/trpc/server";
 import { OrdersManagementClient } from "./OrdersManagementClient";
 import { TeamSelector } from "./management/TeamSelector";
 import { DashboardWidgetsServer } from "./dashboard/DashboardWidgetsServer";
 import { NoOrdersView } from "./management/NoOrdersView";
+import { type RouterOutputs } from "~/trpc/react";
 
-export async function OrdersManagementServer() {
-  // Server-side data fetching
-  const selectedTeam = await api.team.getSelectedTeam();
+// Define proper types for the prefetched data
+type OrdersManagementServerProps = {
+  prefetchedTeam: RouterOutputs["team"]["getSelectedTeam"];
+  prefetchedImportSummary: RouterOutputs["order"]["getImportsSummary"] | null;
+  prefetchedOrderStats: RouterOutputs["order"]["getOrderStats"];
+};
+
+export async function OrdersManagementServer({
+  prefetchedTeam,
+  prefetchedImportSummary,
+  prefetchedOrderStats
+}: OrdersManagementServerProps) {
+  // Use prefetched data instead of making the same API calls again
+  const selectedTeam = prefetchedTeam;
   const hasCredentials = !!selectedTeam?.correiosCredential;
   const hasOnboardingCompleted = selectedTeam && hasCredentials;
-
-  const importSummary = hasOnboardingCompleted
-    ? await api.order.getImportsSummary()
-    : null;
+  const importSummary = prefetchedImportSummary;
 
   return (
     <div className="w-full space-y-4">
@@ -27,7 +35,10 @@ export async function OrdersManagementServer() {
           importSummary={importSummary}
         >
           <Suspense fallback={<div>Loading dashboard stats...</div>}>
-            <DashboardWidgetsServer />
+            <DashboardWidgetsServer 
+              prefetchedOrderStats={prefetchedOrderStats}
+              prefetchedImportSummary={prefetchedImportSummary}
+            />
           </Suspense>
         </OrdersManagementClient>
       ) : (
