@@ -45,8 +45,8 @@ export const SearchFilters = ({
       </SelectTrigger>
       <SelectContent>
         <SelectItem value="all"><span>All Statuses</span></SelectItem>
-        <SelectItem value={OrderStatus.POSTED}><span>Posted</span>
-        </SelectItem>
+        <SelectItem value={OrderStatus.FC}><span>Label issued</span></SelectItem>
+        <SelectItem value={OrderStatus.POSTED}><span>Posted</span></SelectItem>
         <SelectItem value={OrderStatus.NOT_FOUND}><span>Not found</span></SelectItem>
         <SelectItem value={OrderStatus.IN_TRANSIT}><span>In transit</span></SelectItem>
         <SelectItem value={OrderStatus.DELIVERED}><span>Delivered</span></SelectItem>
