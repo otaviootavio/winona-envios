@@ -93,6 +93,8 @@ export function OrdersTable({
 
   const getTrackingStatusColor = (status: OrderStatus) => {
     switch (status) {
+      case "FC":
+        return "bg-purple-100 text-purple-800";
       case "POSTED":
         return "bg-yellow-100 text-yellow-800";
       case "IN_TRANSIT":
@@ -101,9 +103,25 @@ export function OrdersTable({
         return "bg-green-100 text-green-800";
       case "NOT_FOUND":
         return "bg-red-100 text-red-800";
-      case "UNKNOWN":
       default:
         return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const getTrackingStatusLabel = (status: OrderStatus) => {
+    switch (status) {
+      case "FC":
+        return "Label issued";
+      case "POSTED":
+        return "Posted";
+      case "IN_TRANSIT":
+        return "In transit";
+      case "DELIVERED":
+        return "Delivered";
+      case "NOT_FOUND":
+        return "Not found";
+      default:
+        return "Unknown";
     }
   };
 
@@ -186,7 +204,7 @@ export function OrdersTable({
                     variant="secondary"
                     className={getTrackingStatusColor(order.shippingStatus)}
                   >
-                    {order.shippingStatus}
+                    {getTrackingStatusLabel(order.shippingStatus)}
                   </Badge>
                 </TableCell>
                 <TableCell>{order.trackingCode ?? "N/A"}</TableCell>

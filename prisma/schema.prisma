@@ -107,6 +107,7 @@ model Order {
 
 enum OrderStatus {
   UNKNOWN     @map("DESCONHECIDO")  // Initial state
+  FC          @map("FICHA_CADASTRAL") // Etiqueta emitida
   POSTED      @map("POSTADO")       // Found in Correios
   NOT_FOUND   @map("NAO_ENCONTRADO") // Not found in Correios
   IN_TRANSIT  @map("EM_TRANSITO")   // When tracking shows movement
