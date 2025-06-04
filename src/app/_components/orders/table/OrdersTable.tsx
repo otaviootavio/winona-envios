@@ -101,7 +101,6 @@ export function OrdersTable({
         return "bg-green-100 text-green-800";
       case "NOT_FOUND":
         return "bg-red-100 text-red-800";
-      case "UNKNOWN":
       default:
         return "bg-gray-100 text-gray-800";
     }
@@ -119,7 +118,6 @@ export function OrdersTable({
         return "Delivered";
       case "NOT_FOUND":
         return "Not found";
-      case "UNKNOWN":
       default:
         return "Unknown";
     }

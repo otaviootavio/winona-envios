@@ -15,7 +15,6 @@ const getTrackingStatusLabel = (status: string) => {
       return "Delivered";
     case "NOT_FOUND":
       return "Not found";
-    case "UNKNOWN":
     default:
       return "Unknown";
   }
