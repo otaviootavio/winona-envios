@@ -93,6 +93,8 @@ export function OrdersTable({
 
   const getTrackingStatusColor = (status: OrderStatus) => {
     switch (status) {
+      case "FC":
+        return "bg-purple-100 text-purple-800";
       case "POSTED":
         return "bg-yellow-100 text-yellow-800";
       case "IN_TRANSIT":
