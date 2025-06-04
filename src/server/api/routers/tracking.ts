@@ -20,17 +20,28 @@ const updateTrackingSchema = z.object({
 });
 
 // Helper function to determine order status
-const determineOrderStatus = (status: string): OrderStatus => {
-  const normalizedStatus = status.toLowerCase();
-  if (normalizedStatus.includes("entregue")) {
-    return OrderStatus.DELIVERED;
-  } else if (
-    normalizedStatus.includes("trânsito") ||
-    normalizedStatus.includes("transito")
-  ) {
-    return OrderStatus.IN_TRANSIT;
+const determineOrderStatus = (eventCode: string): OrderStatus => {
+  const code = eventCode?.trim().toUpperCase();
+  switch (code) {
+    case "FC":
+      return OrderStatus.FC; // Etiqueta emitida
+    case "PO":
+      return OrderStatus.POSTED; // Postagem
+    case "RO":
+      return OrderStatus.IN_TRANSIT; // Recebido em unidade
+    case "DO":
+      return OrderStatus.IN_TRANSIT; // Despacho
+    case "OEC":
+      return OrderStatus.IN_TRANSIT; // Saiu para entrega
+    case "BDE":
+      return OrderStatus.DELIVERED; // Entregue
+    case "BDI":
+      return OrderStatus.DELIVERED; // Entregue
+    case "BDR":
+      return OrderStatus.DELIVERED; // Entregue
+    default:
+      return OrderStatus.UNKNOWN;
   }
-  return OrderStatus.POSTED;
 };
 
 // Initialize the auth repository (can be reused)
@@ -125,6 +136,7 @@ const processTrackingInfo = async (
   trackingCode: string,
 ) => {
   const tracking = await correiosRepo.getObjectTracking(trackingCode, "U");
+  console.log("[processTrackingInfo] Tracking response:", tracking?.objetos[0]?.eventos);
 
   if (!tracking?.objetos?.[0]?.eventos?.length) {
     return {
@@ -145,7 +157,7 @@ const processTrackingInfo = async (
 
   return {
     success: true,
-    status: determineOrderStatus(latestEvent.descricao),
+    status: determineOrderStatus(latestEvent.codigo),
     data: {
       status: latestEvent.descricao,
       lastUpdate: latestEvent.dtHrCriado,
@@ -368,6 +380,7 @@ export const trackingRouter = createTRPCRouter({
             
             // Group orders by status to reduce database calls
             const orderUpdates: Record<OrderStatus, string[]> = {
+              [OrderStatus.FC]: [],
               [OrderStatus.DELIVERED]: [],
               [OrderStatus.IN_TRANSIT]: [],
               [OrderStatus.POSTED]: [],
@@ -395,7 +408,7 @@ export const trackingRouter = createTRPCRouter({
                 return;
               }
               
-              const status = determineOrderStatus(latestEvent.descricao);
+              const status = determineOrderStatus(latestEvent.codigo);
               orderUpdates[status].push(order.id);
             });
             

@@ -107,6 +107,24 @@ export function OrdersTable({
     }
   };
 
+  const getTrackingStatusLabel = (status: OrderStatus) => {
+    switch (status) {
+      case "FC":
+        return "Label issued";
+      case "POSTED":
+        return "Posted";
+      case "IN_TRANSIT":
+        return "In transit";
+      case "DELIVERED":
+        return "Delivered";
+      case "NOT_FOUND":
+        return "Not found";
+      case "UNKNOWN":
+      default:
+        return "Unknown";
+    }
+  };
+
   const getSortIcon = (field: "orderNumber" | "updatedAt") => {
     if (sortBy !== field) return <ArrowUpDown className="ml-2 h-4 w-4" />;
     return (
@@ -186,7 +204,7 @@ export function OrdersTable({
                     variant="secondary"
                     className={getTrackingStatusColor(order.shippingStatus)}
                   >
-                    {order.shippingStatus}
+                    {getTrackingStatusLabel(order.shippingStatus)}
                   </Badge>
                 </TableCell>
                 <TableCell>{order.trackingCode ?? "N/A"}</TableCell>
