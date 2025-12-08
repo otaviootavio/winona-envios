@@ -267,6 +267,7 @@ export function CSVPreview({ data, file }: CSVPreviewProps) {
                     <TableCell>{order.orderNumber}</TableCell>
                     <TableCell>{order.shippingStatus}</TableCell>
                     <TableCell>
+                      {/* eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing */}
                       {order.trackingCode ? (
                         order.trackingCode
                       ) : (
